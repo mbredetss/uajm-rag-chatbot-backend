@@ -5,7 +5,7 @@ import { HumanMessage } from '@langchain/core/messages';
 import pool from './src/producer/utils/database.js';
 
 const llm = new ChatGoogleGenerativeAI({
-  model: 'gemini-2.0-flash',
+  model: 'gemini-3-flash-preview',
   temperature: 0,
 });
 
