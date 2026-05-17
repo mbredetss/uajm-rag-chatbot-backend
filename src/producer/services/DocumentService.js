@@ -26,32 +26,54 @@ const verifySecretCode = (secretCode) => {
 
 const addDocument = async (req) => {
   const file = req.file;
-  const { url, secretCode } = req.body;
+  const { secretCode } = req.body;
 
-  if (!file && !url) {
-    throw new ValidationError('Dokumen atau URL harus dikirim');
+  if (!file) {
+    throw new ValidationError('Dokumen harus dikirim');
   }
 
-  if (file && url) {
-    throw new ValidationError('Kirim dokumen atau URL, tidak keduanya');
-  }
-
-  if (url) {
-    const { error } = urlSchema.validate({ url, secretCode });
-    if (error) {
-      throw new ValidationError(error.details[0].message);
-    }
-  } else {
-    const { error } = documentSchema.validate({ secretCode });
-    if (error) {
-      throw new ValidationError(error.details[0].message);
-    }
+  const { error } = documentSchema.validate({ secretCode });
+  if (error) {
+    throw new ValidationError(error.details[0].message);
   }
 
   verifySecretCode(secretCode);
 
-  const source = file ? file.path : url;
-  const type = file ? 'docs' : 'url';
+  const source = file.path;
+  const type = 'docs';
+
+  const result = await pool.query(
+    'INSERT INTO documents (source, type, status) VALUES ($1, $2, $3) RETURNING *',
+    [source, type, 'in progress'],
+  );
+
+  const document = result.rows[0];
+
+  await publishToQueue(INDEXING_QUEUE, {
+    source,
+    type,
+    documentId: document.id,
+  });
+
+  return document;
+};
+
+const addUrl = async (req) => {
+  const { url, secretCode } = req.body;
+
+  if (!url) {
+    throw new ValidationError('URL harus dikirim');
+  }
+
+  const { error } = urlSchema.validate({ url, secretCode });
+  if (error) {
+    throw new ValidationError(error.details[0].message);
+  }
+
+  verifySecretCode(secretCode);
+
+  const source = url;
+  const type = 'url';
 
   const result = await pool.query(
     'INSERT INTO documents (source, type, status) VALUES ($1, $2, $3) RETURNING *',
@@ -76,4 +98,4 @@ const getAllDocuments = async () => {
   return result.rows;
 };
 
-export { addDocument, getAllDocuments };
+export { addDocument, addUrl, getAllDocuments };

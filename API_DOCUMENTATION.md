@@ -8,9 +8,9 @@ http://localhost:1113
 
 ---
 
-## 1. Upload Dokumen / URL
+## 1. Upload Dokumen
 
-Upload dokumen (.pdf, .csv, .docx) atau URL untuk diindeks oleh chatbot.
+Upload dokumen (.pdf, .csv, .docx) untuk diindeks oleh chatbot.
 
 ### Endpoint
 
@@ -29,10 +29,7 @@ POST /documents
 | Field        | Tipe     | Wajib | Keterangan                                                      |
 | ------------ | -------- | ----- | --------------------------------------------------------------- |
 | `secretCode` | `string` | Ya    | Kode rahasia untuk otentikasi                                   |
-| `document`   | `file`   | *     | File dokumen. Format: `.pdf`, `.csv`, `.docx`. Maks: 10MB       |
-| `url`        | `string` | *     | URL website yang akan diindeks. Harus format URL valid           |
-
-> **Catatan**: Kirim `document` ATAU `url`, tidak keduanya. Salah satu wajib diisi.
+| `document`   | `file`   | Ya    | File dokumen. Format: `.pdf`, `.csv`, `.docx`. Maks: 10MB       |
 
 ### Response Sukses
 
@@ -55,59 +52,113 @@ POST /documents
 
 ### Response Error
 
-**Dokumen kosong / URL kosong:**
+**Dokumen kosong:**
 
 ```json
-{
-  "status": "fail",
-  "message": "Dokumen atau URL harus dikirim"
-}
+{ "status": "fail", "message": "Dokumen harus dikirim" }
 ```
 Status: `400 Bad Request`
 
 **Format dokumen tidak diizinkan:**
 
 ```json
-{
-  "status": "fail",
-  "message": "Format dokumen tidak diizinkan. Format yang diizinkan: .pdf, .csv, .docx"
-}
+{ "status": "fail", "message": "Format dokumen tidak diizinkan. Format yang diizinkan: .pdf, .csv, .docx" }
 ```
 Status: `400 Bad Request`
 
 **Ukuran dokumen melebihi batas:**
 
 ```json
-{
-  "status": "fail",
-  "message": "Ukuran dokumen melebihi batas maksimum 10MB"
-}
-```
-Status: `400 Bad Request`
-
-**Format URL tidak valid:**
-
-```json
-{
-  "status": "fail",
-  "message": "Format URL tidak valid"
-}
+{ "status": "fail", "message": "Ukuran dokumen melebihi batas maksimum 10MB" }
 ```
 Status: `400 Bad Request`
 
 **Kode rahasia tidak valid:**
 
 ```json
-{
-  "status": "fail",
-  "message": "Kode rahasia tidak valid"
-}
+{ "status": "fail", "message": "Kode rahasia tidak valid" }
 ```
 Status: `401 Unauthorized`
 
 ---
 
-## 2. Lihat Status Dokumen
+## 2. Upload URL
+
+Kirim URL website untuk diindeks oleh chatbot.
+
+### Endpoint
+
+```
+POST /urls
+```
+
+### Headers
+
+| Header         | Nilai               | Keterangan |
+| -------------- | ------------------- | ---------- |
+| `Content-Type` | `application/json`  | Wajib      |
+
+### Request Body (JSON)
+
+| Field        | Tipe     | Wajib | Keterangan                                    |
+| ------------ | -------- | ----- | --------------------------------------------- |
+| `secretCode` | `string` | Ya    | Kode rahasia untuk otentikasi                 |
+| `url`        | `string` | Ya    | URL website yang akan diindeks (format valid)  |
+
+### Contoh Request
+
+```json
+{
+  "secretCode": "your_secret_code",
+  "url": "https://example.com/article"
+}
+```
+
+### Response Sukses
+
+**Status Code:** `201 Created`
+
+```json
+{
+  "status": "success",
+  "message": "URL berhasil diunggah",
+  "data": {
+    "id": 2,
+    "source": "https://example.com/article",
+    "type": "url",
+    "status": "in progress",
+    "created_at": "2026-05-17T06:05:00.000Z",
+    "updated_at": "2026-05-17T06:05:00.000Z"
+  }
+}
+```
+
+### Response Error
+
+**URL kosong:**
+
+```json
+{ "status": "fail", "message": "URL harus dikirim" }
+```
+Status: `400 Bad Request`
+
+**Format URL tidak valid:**
+
+```json
+{ "status": "fail", "message": "Format URL tidak valid" }
+```
+Status: `400 Bad Request`
+
+**Kode rahasia tidak valid:**
+
+```json
+{ "status": "fail", "message": "Kode rahasia tidak valid" }
+```
+Status: `401 Unauthorized`
+
+---
+
+## 3. Lihat Status Dokumen
 
 Mengambil daftar semua dokumen/URL beserta statusnya (in progress, completed, failed).
 

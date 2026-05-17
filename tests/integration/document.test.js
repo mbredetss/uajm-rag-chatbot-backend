@@ -31,7 +31,6 @@ const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 
 // Simple HTTP test helper
 const request = async (method, urlPath, options = {}) => {
-  const port = 0; // random port
   const server = app.listen(0);
   const address = server.address();
   const baseUrl = `http://localhost:${address.port}`;
@@ -94,19 +93,22 @@ describe('Document API', () => {
     await pool.end();
   });
 
-  describe('POST /documents', () => {
-    it('should reject when no document or URL is sent', async () => {
+  describe('POST /documents (upload file)', () => {
+    it('should reject when no document is sent', async () => {
       const formData = new FormData();
       formData.append('secretCode', 'test_secret');
 
       const res = await request('POST', '/documents', { body: formData });
       expect(res.status).toBe(400);
-      expect(res.body.message).toBe('Dokumen atau URL harus dikirim');
+      expect(res.body.message).toBe('Dokumen harus dikirim');
     });
 
     it('should reject when secret code is invalid', async () => {
+      const pdfContent = Buffer.from('%PDF-1.4 dummy content');
+      const blob = new Blob([pdfContent], { type: 'application/pdf' });
+
       const formData = new FormData();
-      formData.append('url', 'https://example.com');
+      formData.append('document', blob, 'test.pdf');
       formData.append('secretCode', 'wrong_secret');
 
       const res = await request('POST', '/documents', { body: formData });
@@ -114,36 +116,7 @@ describe('Document API', () => {
       expect(res.body.message).toBe('Kode rahasia tidak valid');
     });
 
-    it('should reject when URL format is invalid', async () => {
-      const formData = new FormData();
-      formData.append('url', 'not-a-url');
-      formData.append('secretCode', 'test_secret');
-
-      const res = await request('POST', '/documents', { body: formData });
-      expect(res.status).toBe(400);
-      expect(res.body.message).toContain('Format URL tidak valid');
-    });
-
-    it('should upload URL successfully', async () => {
-      const formData = new FormData();
-      formData.append('url', 'https://example.com');
-      formData.append('secretCode', 'test_secret');
-
-      const res = await request('POST', '/documents', { body: formData });
-      expect(res.status).toBe(201);
-      expect(res.body.status).toBe('success');
-      expect(res.body.data.type).toBe('url');
-      expect(res.body.data.source).toBe('https://example.com');
-      expect(res.body.data.status).toBe('in progress');
-      expect(publishToQueue).toHaveBeenCalledWith('indexing_queue', {
-        source: 'https://example.com',
-        type: 'url',
-        documentId: res.body.data.id,
-      });
-    });
-
     it('should upload PDF document successfully', async () => {
-      // Create a dummy PDF file
       const pdfContent = Buffer.from('%PDF-1.4 dummy content');
       const blob = new Blob([pdfContent], { type: 'application/pdf' });
 
@@ -201,25 +174,68 @@ describe('Document API', () => {
     });
 
     it('should reject when secretCode is missing', async () => {
-      const formData = new FormData();
-      formData.append('url', 'https://example.com');
-
-      const res = await request('POST', '/documents', { body: formData });
-      expect(res.status).toBe(400);
-    });
-
-    it('should reject when both document and URL are sent', async () => {
       const pdfContent = Buffer.from('%PDF-1.4 dummy content');
       const blob = new Blob([pdfContent], { type: 'application/pdf' });
 
       const formData = new FormData();
       formData.append('document', blob, 'test.pdf');
-      formData.append('url', 'https://example.com');
-      formData.append('secretCode', 'test_secret');
 
       const res = await request('POST', '/documents', { body: formData });
       expect(res.status).toBe(400);
-      expect(res.body.message).toBe('Kirim dokumen atau URL, tidak keduanya');
+    });
+  });
+
+  describe('POST /urls (upload URL)', () => {
+    it('should reject when no URL is sent', async () => {
+      const res = await request('POST', '/urls', {
+        body: JSON.stringify({ secretCode: 'test_secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe('URL harus dikirim');
+    });
+
+    it('should reject when secret code is invalid', async () => {
+      const res = await request('POST', '/urls', {
+        body: JSON.stringify({ url: 'https://example.com', secretCode: 'wrong_secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe('Kode rahasia tidak valid');
+    });
+
+    it('should reject when URL format is invalid', async () => {
+      const res = await request('POST', '/urls', {
+        body: JSON.stringify({ url: 'not-a-url', secretCode: 'test_secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toContain('Format URL tidak valid');
+    });
+
+    it('should upload URL successfully', async () => {
+      const res = await request('POST', '/urls', {
+        body: JSON.stringify({ url: 'https://example.com', secretCode: 'test_secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data.type).toBe('url');
+      expect(res.body.data.source).toBe('https://example.com');
+      expect(res.body.data.status).toBe('in progress');
+      expect(publishToQueue).toHaveBeenCalledWith('indexing_queue', {
+        source: 'https://example.com',
+        type: 'url',
+        documentId: res.body.data.id,
+      });
+    });
+
+    it('should reject when secretCode is missing for URL', async () => {
+      const res = await request('POST', '/urls', {
+        body: JSON.stringify({ url: 'https://example.com' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
     });
   });
 
@@ -231,7 +247,6 @@ describe('Document API', () => {
     });
 
     it('should return all documents', async () => {
-      // Insert test data
       await pool.query(
         "INSERT INTO documents (source, type, status) VALUES ('test.pdf', 'docs', 'completed')",
       );

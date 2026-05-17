@@ -4,3 +4,4 @@ uploads/
 .env.test
 CLAUDE.md
 prompt.md
+coverage
