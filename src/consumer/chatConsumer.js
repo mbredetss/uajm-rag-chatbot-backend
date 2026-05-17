@@ -18,7 +18,7 @@ const retrieveContext = async (query) => {
 const generateAnswer = async (question, relevantDocs) => {
   const context = relevantDocs.map((doc) => doc.pageContent).join('\n\n');
 
-  const systemPrompt = `You are a helpful assistant who is good at analyzing source information and answering questions
+  const systemPrompt = `You are a helpful assistant who is good at analyzing source information and answering questions.
         Use the following source documents to answer the user's questions.
         If you don't know the answer, just say that you don't know.
         Keep the answer concise.
@@ -40,21 +40,14 @@ const saveConversation = async (question, answer, relevantContext) => {
   );
 };
 
-/**
- * Kirim jawaban ke nomor WhatsApp pengguna.
- *
- * TODO: Uncomment pemanggilan fungsi ini di processChat()
- * setelah evaluasi selesai.
- *
- * Lokasi kode: lihat fungsi processChat() di bawah,
- * cari comment "KIRIM WHATSAPP" untuk mengaktifkan pengiriman.
- */
 const sendWhatsAppMessage = async (phoneNumber, message) => {
   await axios.post(
     `https://graph.facebook.com/v21.0/${process.env.BUSINESS_PHONE_NUMBER_ID}/messages`,
     {
       messaging_product: 'whatsapp',
+      recipient_type: 'individual', 
       to: phoneNumber,
+      type: "text",
       text: { body: message },
     },
     {

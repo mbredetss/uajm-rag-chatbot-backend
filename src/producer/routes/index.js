@@ -33,9 +33,9 @@ router.get('/documents', async (req, res, next) => {
   }
 });
 
-router.get('/webhook', verifyWebhook);
+router.get('/', verifyWebhook);
 
-router.post('/webhook', async (req, res, next) => {
+router.post('/', async (req, res, next) => {
   try {
     await handleIncomingMessage(req, res);
   } catch (error) {
