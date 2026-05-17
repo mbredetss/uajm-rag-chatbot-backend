@@ -1,0 +1,9 @@
+/* eslint-disable camelcase */
+
+exports.up = (pgm) => {
+  pgm.sql('CREATE EXTENSION IF NOT EXISTS vector');
+};
+
+exports.down = (pgm) => {
+  pgm.sql('DROP EXTENSION IF EXISTS vector');
+};

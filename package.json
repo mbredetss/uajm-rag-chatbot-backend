@@ -1,7 +1,7 @@
 {
   "name": "uajm-rag-chatbot",
   "version": "1.0.0",
-  "description": "chatbot with Niave RAG",
+  "description": "chatbot with Naive RAG",
   "keywords": [
     "chatbot",
     "RAG",
@@ -10,8 +10,39 @@
   "license": "ISC",
   "author": "mbredetss",
   "type": "module",
-  "main": "index.js",
+  "main": "src/producer/server.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "start": "node src/producer/server.js",
+    "dev": "node --watch src/producer/server.js",
+    "start:consumer": "node src/consumer/index.js",
+    "test": "vitest run --coverage",
+    "test:watch": "vitest",
+    "migrate:up": "node-pg-migrate up",
+    "migrate:down": "node-pg-migrate down",
+    "migrate:create": "node-pg-migrate create"
+  },
+  "dependencies": {
+    "@langchain/community": "^1.1.28",
+    "@langchain/core": "^1.1.46",
+    "@langchain/google-genai": "^2.1.30",
+    "@langchain/openrouter": "^0.2.4",
+    "@langchain/textsplitters": "^1.0.1",
+    "amqplib": "^2.0.1",
+    "axios": "^1.16.1",
+    "cheerio": "^1.2.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "joi": "^18.2.1",
+    "langchain": "^1.4.0",
+    "langsmith": "^0.7.1",
+    "mammoth": "^1.12.0",
+    "multer": "^2.1.1",
+    "node-pg-migrate": "^8.0.4",
+    "pdf-parse": "^2.4.5",
+    "pg": "^8.20.0"
+  },
+  "devDependencies": {
+    "@vitest/coverage-v8": "^4.1.6",
+    "vitest": "^4.1.6"
   }
 }
