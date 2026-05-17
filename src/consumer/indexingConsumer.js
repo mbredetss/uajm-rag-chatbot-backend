@@ -1,6 +1,6 @@
 import path from 'path';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
-import { TextLoader } from 'langchain/document_loaders/fs/text';
+import { TextLoader } from '@langchain/classic/document_loaders/fs/text';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
 import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
@@ -9,7 +9,7 @@ import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import pool from '../producer/utils/database.js';
 
 const CHUNK_SIZE = 1000;
-const CHUNK_OVERLAP = 200; // 20% of chunkSize
+const CHUNK_OVERLAP = 200;
 
 const splitter = new RecursiveCharacterTextSplitter({
   chunkSize: CHUNK_SIZE,
@@ -18,7 +18,8 @@ const splitter = new RecursiveCharacterTextSplitter({
 
 const embeddings = new HuggingFaceInferenceEmbeddings({
   apiKey: process.env.HUGGINGFACEHUB_API_KEY,
-  model: 'LazarusNLP/all-indo-e5-small-v4',
+  model: 'LazarusNLP/all-indo-e5-small-v4', 
+  provider: "hf-inference",
 });
 
 const getVectorStore = async () => {
