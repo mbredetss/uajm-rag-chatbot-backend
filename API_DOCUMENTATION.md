@@ -197,6 +197,95 @@ GET /documents
 }
 ```
 
+
+---
+
+## 4. Hapus Dokumen
+
+Menghapus dokumen dari database status dokumen dan menghapus seluruh embedding/vektor dokumen tersebut dari knowledge base (`langchain_pg_embedding`) berdasarkan nama `source`.
+
+### Endpoint
+
+```
+DELETE /documents
+```
+
+### Headers
+
+| Header         | Nilai               | Keterangan |
+| -------------- | ------------------- | ---------- |
+| `Content-Type` | `application/json`  | Wajib      |
+
+### Request Body (JSON)
+
+| Field        | Tipe     | Wajib | Keterangan                                                 |
+| ------------ | -------- | ----- | ---------------------------------------------------------- |
+| `secretCode` | `string` | Ya    | Kode rahasia untuk otentikasi                              |
+| `source`     | `string` | Ya    | Path dokumen lokal atau URL website yang ingin dihapus     |
+
+### Contoh Request
+
+```json
+{
+  "secretCode": "your_secret_code",
+  "source": "https://example.com/article"
+}
+```
+
+### Response Sukses
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "status": "success",
+  "message": "Dokumen berhasil dihapus",
+  "data": {
+    "deletedEmbeddings": 12,
+    "deletedDocuments": 1
+  }
+}
+```
+
+### Response Error
+
+**Source atau secretCode kosong:**
+
+```json
+{
+  "status": "fail",
+  "message": "Source harus dikirim"
+}
+```
+atau
+```json
+{
+  "status": "fail",
+  "message": "\"secretCode\" is required"
+}
+```
+Status: `400 Bad Request`
+
+**Kode rahasia tidak valid:**
+
+```json
+{
+  "status": "fail",
+  "message": "Kode rahasia tidak valid"
+}
+```
+Status: `401 Unauthorized`
+
+**Dokumen tidak ditemukan:**
+
+```json
+{
+  "status": "fail",
+  "message": "Dokumen dengan source 'https://example.com/article' tidak ditemukan"
+}
+```
+Status: `404 Not Found`
+
 ---
 
 ## Status Dokumen
