@@ -18,7 +18,7 @@ const splitter = new RecursiveCharacterTextSplitter({
 
 const embeddings = new HuggingFaceInferenceEmbeddings({
   apiKey: process.env.HUGGINGFACEHUB_API_KEY,
-  model: 'LazarusNLP/all-indo-e5-small-v4', 
+  model: 'LazarusNLP/all-indo-e5-small-v4',
   provider: "hf-inference",
 });
 
@@ -72,10 +72,18 @@ const updateDocumentStatus = async (documentId, status) => {
   );
 };
 
+const docsCleaning = (docs) => {
+  return docs.map(doc => ({
+    pageContent: doc.pageContent.replace(/\n/g, ' '),
+    metadata: doc.metadata
+  }));
+};
+
 const processIndexing = async ({ source, type, documentId }) => {
   try {
     const docs = await loadDocument(source, type);
-    const splitDocs = await splitter.splitDocuments(docs);
+    const cleanDocs = docsCleaning(docs);
+    const splitDocs = await splitter.splitDocuments(cleanDocs);
     const vectorStore = await getVectorStore();
     await vectorStore.addDocuments(splitDocs);
     await updateDocumentStatus(documentId, 'completed');
