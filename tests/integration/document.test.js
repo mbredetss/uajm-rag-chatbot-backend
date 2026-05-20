@@ -80,7 +80,7 @@ describe('Document API', () => {
         collection_id UUID,
         embedding vector(384),
         content TEXT,
-        cmetadata JSONB
+        metadata JSONB
       )
     `);
   });
@@ -280,7 +280,7 @@ describe('Document API', () => {
       );
       // Insert into vector store
       await pool.query(
-        `INSERT INTO langchain_pg_embedding (content, cmetadata) VALUES ('test content', '{"source": "uploads/test.pdf"}'::jsonb)`,
+        `INSERT INTO langchain_pg_embedding (content, metadata) VALUES ('test content', '{"source": "uploads/test.pdf"}'::jsonb)`,
       );
 
       const res = await request('DELETE', '/documents', {
