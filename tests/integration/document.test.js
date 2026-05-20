@@ -62,7 +62,7 @@ describe('Document API', () => {
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    // Ensure table exists
+    // Ensure tables exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS documents (
         id SERIAL PRIMARY KEY,
@@ -73,11 +73,22 @@ describe('Document API', () => {
         updated_at TIMESTAMP DEFAULT NOW()
       )
     `);
+    await pool.query('CREATE EXTENSION IF NOT EXISTS vector');
+    await pool.query(`
+      CREATE TABLE IF NOT EXISTS langchain_pg_embedding (
+        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+        collection_id UUID,
+        embedding vector(384),
+        content TEXT,
+        cmetadata JSONB
+      )
+    `);
   });
 
   afterEach(async () => {
     // Clean up database
     await pool.query('DELETE FROM documents');
+    await pool.query('DELETE FROM langchain_pg_embedding');
     // Clean up uploaded files
     if (fs.existsSync(uploadDir)) {
       const files = fs.readdirSync(uploadDir);
@@ -89,6 +100,7 @@ describe('Document API', () => {
   });
 
   afterAll(async () => {
+    await pool.query('DROP TABLE IF EXISTS langchain_pg_embedding');
     await pool.query('DROP TABLE IF EXISTS documents');
     await pool.end();
   });
@@ -257,6 +269,63 @@ describe('Document API', () => {
       const res = await request('GET', '/documents');
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(2);
+    });
+  });
+
+  describe('DELETE /documents', () => {
+    it('should delete document by source successfully', async () => {
+      // Insert into documents table
+      await pool.query(
+        "INSERT INTO documents (source, type, status) VALUES ('uploads/test.pdf', 'docs', 'completed')",
+      );
+      // Insert into vector store
+      await pool.query(
+        `INSERT INTO langchain_pg_embedding (content, cmetadata) VALUES ('test content', '{"source": "uploads/test.pdf"}'::jsonb)`,
+      );
+
+      const res = await request('DELETE', '/documents', {
+        body: JSON.stringify({ source: 'uploads/test.pdf', secretCode: 'test_secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(200);
+      expect(res.body.status).toBe('success');
+      expect(res.body.data.deletedEmbeddings).toBe(1);
+      expect(res.body.data.deletedDocuments).toBe(1);
+    });
+
+    it('should reject when source is missing', async () => {
+      const res = await request('DELETE', '/documents', {
+        body: JSON.stringify({ secretCode: 'test_secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Source harus dikirim');
+    });
+
+    it('should reject when secretCode is invalid', async () => {
+      const res = await request('DELETE', '/documents', {
+        body: JSON.stringify({ source: 'uploads/test.pdf', secretCode: 'wrong' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+      expect(res.body.message).toBe('Kode rahasia tidak valid');
+    });
+
+    it('should reject when secretCode is missing', async () => {
+      const res = await request('DELETE', '/documents', {
+        body: JSON.stringify({ source: 'uploads/test.pdf' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('should return 404 when source not found', async () => {
+      const res = await request('DELETE', '/documents', {
+        body: JSON.stringify({ source: 'nonexistent.pdf', secretCode: 'test_secret' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(404);
+      expect(res.body.message).toContain('tidak ditemukan');
     });
   });
 });

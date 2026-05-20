@@ -59,11 +59,11 @@ describe('Webhook API', () => {
     await pool.end();
   });
 
-  describe('GET /webhook', () => {
+  describe('GET / (webhook verification)', () => {
     it('should verify webhook with valid token', async () => {
       const res = await request(
         'GET',
-        '/webhook?hub.mode=subscribe&hub.verify_token=test_verify_token&hub.challenge=challenge_123',
+        '/?hub.mode=subscribe&hub.verify_token=test_verify_token&hub.challenge=challenge_123',
       );
       expect(res.status).toBe(200);
       expect(res.body).toBe('challenge_123');
@@ -72,7 +72,7 @@ describe('Webhook API', () => {
     it('should reject webhook with invalid token', async () => {
       const res = await request(
         'GET',
-        '/webhook?hub.mode=subscribe&hub.verify_token=wrong_token&hub.challenge=challenge_123',
+        '/?hub.mode=subscribe&hub.verify_token=wrong_token&hub.challenge=challenge_123',
       );
       expect(res.status).toBe(403);
     });
@@ -80,13 +80,13 @@ describe('Webhook API', () => {
     it('should reject webhook with invalid mode', async () => {
       const res = await request(
         'GET',
-        '/webhook?hub.mode=invalid&hub.verify_token=test_verify_token&hub.challenge=challenge_123',
+        '/?hub.mode=invalid&hub.verify_token=test_verify_token&hub.challenge=challenge_123',
       );
       expect(res.status).toBe(403);
     });
   });
 
-  describe('POST /webhook', () => {
+  describe('POST / (webhook incoming message)', () => {
     it('should process incoming message and publish to queue', async () => {
       const payload = {
         entry: [{
@@ -102,7 +102,7 @@ describe('Webhook API', () => {
         }],
       };
 
-      const res = await request('POST', '/webhook', {
+      const res = await request('POST', '/', {
         body: JSON.stringify(payload),
       });
 
@@ -128,7 +128,7 @@ describe('Webhook API', () => {
         }],
       };
 
-      const res = await request('POST', '/webhook', {
+      const res = await request('POST', '/', {
         body: JSON.stringify(payload),
       });
 
@@ -137,7 +137,7 @@ describe('Webhook API', () => {
     });
 
     it('should handle empty body gracefully', async () => {
-      const res = await request('POST', '/webhook', {
+      const res = await request('POST', '/', {
         body: JSON.stringify({}),
       });
       expect(res.status).toBe(200);
@@ -158,7 +158,7 @@ describe('Webhook API', () => {
         }],
       };
 
-      const res = await request('POST', '/webhook', {
+      const res = await request('POST', '/', {
         body: JSON.stringify(payload),
       });
 
@@ -167,3 +167,4 @@ describe('Webhook API', () => {
     });
   });
 });
+

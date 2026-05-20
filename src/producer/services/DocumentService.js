@@ -3,6 +3,7 @@ import pool from '../utils/database.js';
 import { publishToQueue } from '../utils/rabbitmq.js';
 import ValidationError from '../exceptions/ValidationError.js';
 import AuthenticationError from '../exceptions/AuthenticationError.js';
+import NotFoundError from '../exceptions/NotFoundError.js';
 
 const INDEXING_QUEUE = 'indexing_queue';
 
@@ -98,4 +99,39 @@ const getAllDocuments = async () => {
   return result.rows;
 };
 
-export { addDocument, addUrl, getAllDocuments };
+const deleteDocumentBySource = async (req) => {
+  const { source, secretCode } = req.body;
+
+  if (!source) {
+    throw new ValidationError('Source harus dikirim');
+  }
+
+  if (!secretCode) {
+    throw new ValidationError('"secretCode" is required');
+  }
+
+  verifySecretCode(secretCode);
+
+  // Hapus dari vector store (langchain_pg_embedding) berdasarkan metadata.source
+  const vectorResult = await pool.query(
+    `DELETE FROM langchain_pg_embedding WHERE metadata->>'source' = $1`,
+    [source],
+  );
+
+  // Hapus dari table documents
+  const docResult = await pool.query(
+    'DELETE FROM documents WHERE source = $1',
+    [source],
+  );
+
+  if (vectorResult.rowCount === 0 && docResult.rowCount === 0) {
+    throw new NotFoundError(`Dokumen dengan source '${source}' tidak ditemukan`);
+  }
+
+  return {
+    deletedEmbeddings: vectorResult.rowCount,
+    deletedDocuments: docResult.rowCount,
+  };
+};
+
+export { addDocument, addUrl, getAllDocuments, deleteDocumentBySource };

@@ -1,6 +1,6 @@
 import { Router } from 'express';
 import { upload } from '../middlewares/uploadMiddleware.js';
-import { addDocument, addUrl, getAllDocuments } from '../services/DocumentService.js';
+import { addDocument, addUrl, getAllDocuments, deleteDocumentBySource } from '../services/DocumentService.js';
 import { verifyWebhook, handleIncomingMessage } from '../services/WebhookService.js';
 import { successResponse } from '../utils/response.js';
 
@@ -28,6 +28,15 @@ router.get('/documents', async (req, res, next) => {
   try {
     const documents = await getAllDocuments();
     return successResponse(res, 200, 'Berhasil mengambil data dokumen', documents);
+  } catch (error) {
+    next(error);
+  }
+});
+
+router.delete('/documents', async (req, res, next) => {
+  try {
+    const result = await deleteDocumentBySource(req);
+    return successResponse(res, 200, 'Dokumen berhasil dihapus', result);
   } catch (error) {
     next(error);
   }
