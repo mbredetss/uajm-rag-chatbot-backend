@@ -1,12 +1,12 @@
 import 'dotenv/config';
 import { traceable } from 'langsmith/traceable';
-import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import { HumanMessage } from '@langchain/core/messages';
 import pool from './src/producer/utils/database.js';
+import { ChatOpenRouter } from '@langchain/openrouter';
 
-const llm = new ChatGoogleGenerativeAI({
-  model: 'gemini-3-flash-preview',
-  temperature: 0,
+const llm = new ChatOpenRouter({
+  model: 'openai/gpt-oss-20b:free',
+  apiKey: process.env.OPENROUTER_API_KEY,
 });
 
 const RETRIEVAL_RELEVANCE_PROMPT = `You are a teacher grading a quiz. You will be given a QUESTION and a set of FACTS provided by the student. Here is the grade criteria to follow:
@@ -116,7 +116,7 @@ const runEvaluation = traceable(
 
     console.log('Evaluasi selesai. Hasil telah dicatat di LangSmith.');
   },
-  { name: 'rag_evaluation' },
+  { name: 'rag_evaluation_test' },
 );
 
 runEvaluation()
