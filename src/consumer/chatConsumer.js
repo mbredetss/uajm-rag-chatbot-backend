@@ -70,10 +70,7 @@ const processChat = async ({ message, phoneNumber }) => {
 
     await saveConversation(message, answer, relevantContext);
 
-    // ============================================================
-    // KIRIM WHATSAPP — Uncomment baris di bawah setelah evaluasi selesai
-    // ============================================================
-    // await sendWhatsAppMessage(phoneNumber, answer);
+    await sendWhatsAppMessage(phoneNumber, answer);
 
     console.log(`Chat diproses untuk ${phoneNumber}: ${message}`);
   } catch (error) {
