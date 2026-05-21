@@ -59,7 +59,7 @@ const inputs = [
         question: "bagaimana cara membayar kartu rencana studi?",
     },
     {
-        question: "bagaimana prosedur pengajuan cuti akademik dan syarat untuk aktif kembali?",
+        question: "apa syarat untuk aktif kembali setelah cuti akademik?",
     },
     // {
     //     question: "bagaimana prosedur pengajuan cuti akademik?",

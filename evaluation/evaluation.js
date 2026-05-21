@@ -7,10 +7,11 @@ import { getVectorStore } from "../src/consumer/indexingConsumer.js";
 import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import 'dotenv/config';
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
+import { ChatOpenRouter } from "@langchain/openrouter";
 
-const llm = new ChatGoogleGenerativeAI({
-    model: 'gemini-3-flash-preview',
-    temperature: 1,
+const llm = new ChatOpenRouter({
+    model: 'openai/gpt-oss-20b:free',
+    apiKey: process.env.OPENROUTER_API_KEY,
 });
 
 const ragBot = traceable(async (question) => {
