@@ -1,0 +1,44 @@
+import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
+import { z } from "zod";
+import 'dotenv/config';
+
+// Grade prompt
+const relevanceInstructions = `You are a teacher grading a quiz. You will be given a QUESTION and a STUDENT ANSWER. Here is the grade criteria to follow:
+(1) Ensure the STUDENT ANSWER is concise and relevant to the QUESTION
+(2) Ensure the STUDENT ANSWER helps to answer the QUESTION
+
+Relevance:
+A relevance value of True means that the student's answer meets all of the criteria.
+A relevance value of False means that the student's answer does not meet all of the criteria.
+
+Explain your reasoning in a step-by-step manner to ensure your reasoning and conclusion are correct. Avoid simply stating the correct answer at the outset.`
+
+const relevanceLLM = new ChatGoogleGenerativeAI({
+    model: "gemini-3-flash-preview",
+    temperature: 0,
+}).withStructuredOutput(
+    z
+        .object({
+            explanation: z
+                .string()
+                .describe("Explain your reasoning for the score"),
+            relevant: z
+                .boolean()
+                .describe("Provide the score on whether the answer addresses the question")
+        })
+        .describe("Relevance score for generated answer v.s. input question.")
+);
+
+async function answerRelevance({
+    inputs,
+    outputs,
+}) {
+    const answer = `QUESTION: ${inputs.question}
+        STUDENT ANSWER: ${outputs.answer}`
+
+    // Run evaluator
+    const grade = await relevanceLLM.invoke([{ role: "system", content: relevanceInstructions }, { role: "user", content: answer }])
+    return { key: "answer_relevance", score: grade.relevant };
+};
+
+export default answerRelevance;
