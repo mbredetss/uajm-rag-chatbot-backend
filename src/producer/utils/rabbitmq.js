@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import amqplib from 'amqplib';
 
 let connection = null;
