@@ -5,7 +5,7 @@ import { getVectorStore } from './indexingConsumer.js';
 import { ChatGroq } from '@langchain/groq';
 
 const llm = new ChatGroq({
-  model: 'openai/gpt-oss-20b:free',
+  model: 'openai/gpt-oss-20b',
 });
 
 const retrieveContext = async (query) => {
@@ -17,10 +17,10 @@ const retrieveContext = async (query) => {
 const generateAnswer = async (question, relevantDocs) => {
   const context = relevantDocs.map((doc) => doc.pageContent).join('\n\n');
 
-  const systemPrompt = `You are a helpful assistant who is good at analyzing source information and answering questions.
-        Use the following source documents to answer the user's questions.
+  const systemPrompt = `You are a professional Customer Service Representative at Atma Jaya University who is good at analyzing source information and answering questions.
+        Use the following source documents to answer the user's questions. You will be placed on WhatsApp, so provide answers that can be read via WhatsApp.
         If you don't know the answer, just say that you don't know.
-        Keep the answer concise.
+        Keep the answer concise. Always respond in the same language used by the user in their query
         Documents:
         ${context}`;
 
