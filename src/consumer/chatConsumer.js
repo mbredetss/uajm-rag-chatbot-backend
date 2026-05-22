@@ -1,12 +1,11 @@
 import axios from 'axios';
-import { ChatOpenRouter } from '@langchain/openrouter';
 import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import pool from '../producer/utils/database.js';
 import { getVectorStore } from './indexingConsumer.js';
+import { ChatGroq } from '@langchain/groq';
 
-const llm = new ChatOpenRouter({
+const llm = new ChatGroq({
   model: 'openai/gpt-oss-20b:free',
-  apiKey: process.env.OPENROUTER_API_KEY,
 });
 
 const retrieveContext = async (query) => {
