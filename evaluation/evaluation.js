@@ -4,14 +4,13 @@ import contextRelevance from "./metrik/contextRelevance.js";
 import groundedness from "./metrik/Groundedness.js";
 import answerRelevance from "./metrik/answerRelevance.js";
 import { getVectorStore } from "../src/consumer/indexingConsumer.js";
-import { ChatGoogleGenerativeAI } from "@langchain/google-genai";
 import 'dotenv/config';
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
-import { ChatOpenRouter } from "@langchain/openrouter";
+import { ChatGroq } from "@langchain/groq"
 
-const llm = new ChatOpenRouter({
-    model: 'openai/gpt-oss-20b:free',
-    apiKey: process.env.OPENROUTER_API_KEY,
+const llm = new ChatGroq({
+    model: 'openai/gpt-oss-120b:free',
+    maxRetries: 10
 });
 
 const ragBot = traceable(async (question) => {
@@ -44,3 +43,5 @@ const experimentResults = await evaluate(targetFunc, {
     experimentPrefix: "rag-doc-relevance",
     metadata: { version: "LCEL context, gpt-4-0125-preview" },
 });
+
+export default  llm;

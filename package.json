@@ -20,6 +20,7 @@
     "migrate:up": "node-pg-migrate up",
     "migrate:down": "node-pg-migrate down",
     "migrate:create": "node-pg-migrate create",
+    "createDataset": "node ./evaluation/createDataset.js",
     "evaluate": "node ./evaluation/evaluation.js"
   },
   "dependencies": {
@@ -27,6 +28,7 @@
     "@langchain/community": "^1.1.28",
     "@langchain/core": "^1.1.46",
     "@langchain/google-genai": "^2.1.30",
+    "@langchain/groq": "^1.2.1",
     "@langchain/openrouter": "^0.2.4",
     "@langchain/textsplitters": "^1.0.1",
     "amqplib": "^2.0.1",

@@ -5,7 +5,7 @@ import { getVectorStore } from './indexingConsumer.js';
 import { ChatGroq } from '@langchain/groq';
 
 const llm = new ChatGroq({
-  model: 'openai/gpt-oss-20b',
+  model: 'openai/gpt-oss-120b',
 });
 
 const retrieveContext = async (query) => {
