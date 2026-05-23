@@ -1,4 +1,4 @@
-import { publishToQueue } from '../utils/rabbitmq.js';
+import { publishToQueue } from '../../../utils/rabbitmq.js';
 
 const CHAT_QUEUE = 'chat_queue';
 

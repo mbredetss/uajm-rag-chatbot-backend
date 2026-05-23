@@ -9,5 +9,6 @@ export default defineConfig({
       include: ['src/**/*.js'],
     },
     testTimeout: 30000,
+    fileParallelism: false, 
   },
 });

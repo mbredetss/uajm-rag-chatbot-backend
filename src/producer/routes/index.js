@@ -1,10 +1,12 @@
 import { Router } from 'express';
 import { upload } from '../middlewares/uploadMiddleware.js';
 import { addDocument, addUrl, getAllDocuments, deleteDocumentBySource } from '../services/DocumentService.js';
-import { verifyWebhook, handleIncomingMessage } from '../services/WebhookService.js';
 import { successResponse } from '../utils/response.js';
+import webhooksRouter from '../services/webhooks/routes/index.js';
 
 const router = Router();
+
+router.use('/', webhooksRouter);
 
 router.post('/documents', upload.single('document'), async (req, res, next) => {
   try {
@@ -37,16 +39,6 @@ router.delete('/documents', async (req, res, next) => {
   try {
     const result = await deleteDocumentBySource(req);
     return successResponse(res, 200, 'Dokumen berhasil dihapus', result);
-  } catch (error) {
-    next(error);
-  }
-});
-
-router.get('/', verifyWebhook);
-
-router.post('/', async (req, res, next) => {
-  try {
-    await handleIncomingMessage(req, res);
   } catch (error) {
     next(error);
   }
