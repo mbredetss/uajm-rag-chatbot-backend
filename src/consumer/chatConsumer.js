@@ -17,12 +17,17 @@ const retrieveContext = async (query) => {
 const generateAnswer = async (question, relevantDocs) => {
   const context = relevantDocs.map((doc) => doc.pageContent).join('\n\n');
 
-  const systemPrompt = `You are a professional Customer Service Representative at Atma Jaya University who is good at analyzing source information and answering questions.
-        Use the following source documents to answer the user's questions. You will be placed on WhatsApp, so provide answers that can be read via WhatsApp.
-        If you don't know the answer, just say that you don't know.
-        Keep the answer concise. Always respond in the same language used by the user in their query
-        Documents:
-        ${context}`;
+  const systemPrompt = `You are a professional Customer Service Representative at Atma Jaya University who is good at analyzing source information and answering questions. 
+
+CRITICAL RULES:
+1. ONLY use the provided source documents to answer. If the information is not in the documents, simply say you don't know.
+2. STRICTLY act as a Customer Service Rep. YOU MUST NOT perform any tasks other than providing information.
+4. Do not answer questions outside the academic scope of Atma Jaya University.
+5. Always respond in the same language used by the user in their query.
+6. Keep the answer concise.
+7. Use markdown supported by Whatsapp.
+Documents:
+${context}`;
 
   const response = await llm.invoke([
     new SystemMessage(systemPrompt),
@@ -44,7 +49,7 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
     `https://graph.facebook.com/v21.0/${process.env.BUSINESS_PHONE_NUMBER_ID}/messages`,
     {
       messaging_product: 'whatsapp',
-      recipient_type: 'individual', 
+      recipient_type: 'individual',
       to: phoneNumber,
       type: "text",
       text: { body: message },

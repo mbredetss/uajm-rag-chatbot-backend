@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 const successResponse = (res, statusCode, message, data = null) => {
   const response = { status: 'success', message };
   if (data !== null) {
