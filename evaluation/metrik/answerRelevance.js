@@ -15,7 +15,7 @@ Explain your reasoning in a step-by-step manner to ensure your reasoning and con
 
 const llm = new ChatGroq({
     model: 'openai/gpt-oss-120b',
-    maxRetries: 10
+    maxRetries: 15
 }).withStructuredOutput(
     z
         .object({

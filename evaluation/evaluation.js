@@ -9,21 +9,27 @@ import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatGroq } from "@langchain/groq"
 
 const llm = new ChatGroq({
-    model: 'openai/gpt-oss-120b:free',
-    maxRetries: 10
+    model: 'openai/gpt-oss-120b',
+    maxRetries: 15, 
 });
 
+const vectorStore = await getVectorStore();
+
 const ragBot = traceable(async (question) => {
-    const vectorStore = await getVectorStore();
     const retrievedDocs = await vectorStore.similaritySearch(question, 5);
     const docsContent = retrievedDocs.map((doc) => doc.pageContent).join('\n\n');
 
-    const systemPrompt = `You are a helpful assistant who is good at analyzing source information and answering questions.
-        Use the following source documents to answer the user's questions.
-        If you don't know the answer, just say that you don't know.
-        Keep the answer concise.
-        Documents:
-        ${docsContent}`;
+    const systemPrompt = `You are a professional Customer Service Representative at Atma Jaya University who is good at analyzing source information and answering questions. 
+
+CRITICAL RULES:
+1. ONLY use the provided source documents to answer. If the information is not in the documents, simply say you don't know.
+2. STRICTLY act as a Customer Service Rep. YOU MUST NOT perform any tasks other than providing information.
+4. Do not answer questions outside the academic scope of Atma Jaya University.
+5. Always respond in the same language used by the user in their query.
+6. Keep the answer concise.
+7. Use markdown supported by Whatsapp.
+Documents:
+${docsContent}`;
 
     const aiMsg = await llm.invoke([
         new SystemMessage(systemPrompt),
@@ -38,10 +44,10 @@ const targetFunc = (inputs) => {
 };
 
 const experimentResults = await evaluate(targetFunc, {
-    data: "UAJM Chatbot Evaluation",
+    data: "Dataset UAJM Chatbot",
     evaluators: [contextRelevance, groundedness, answerRelevance],
     experimentPrefix: "rag-doc-relevance",
-    metadata: { version: "LCEL context, gpt-4-0125-preview" },
+    metadata: { version: "LCEL context, openai/gpt-oss-120b" },
 });
 
-export default  llm;
+export default llm;
