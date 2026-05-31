@@ -8,12 +8,9 @@ import { HuggingFaceInferenceEmbeddings } from '@langchain/community/embeddings/
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import pool from '../producer/utils/database.js';
 
-const CHUNK_SIZE = 1000;
-const CHUNK_OVERLAP = 200;
-
 const splitter = new RecursiveCharacterTextSplitter({
-  chunkSize: CHUNK_SIZE,
-  chunkOverlap: CHUNK_OVERLAP,
+  chunkSize: 500,
+  chunkOverlap: 100,
 });
 
 const embeddings = new HuggingFaceInferenceEmbeddings({
@@ -36,6 +33,8 @@ const getVectorStore = async () => {
     },
   });
 };
+
+const vectorStore = await getVectorStore();
 
 const loadDocument = async (source, type) => {
   if (type === 'url') {
@@ -74,7 +73,7 @@ const updateDocumentStatus = async (documentId, status) => {
 
 const docsCleaning = (docs) => {
   return docs.map(doc => ({
-    pageContent: doc.pageContent.replace(/\n/g, ' '),
+    pageContent: doc.pageContent.replace(/[\n\r\t]/g, ' '),
     metadata: doc.metadata
   }));
 };
@@ -84,7 +83,6 @@ const processIndexing = async ({ source, type, documentId }) => {
     const docs = await loadDocument(source, type);
     const cleanDocs = docsCleaning(docs);
     const splitDocs = await splitter.splitDocuments(cleanDocs);
-    const vectorStore = await getVectorStore();
     await vectorStore.addDocuments(splitDocs);
     await updateDocumentStatus(documentId, 'completed');
     console.log(`Indexing selesai untuk dokumen ${documentId}`);
