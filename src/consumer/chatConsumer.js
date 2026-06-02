@@ -8,8 +8,9 @@ const llm = new ChatGroq({
   model: 'openai/gpt-oss-120b',
 });
 
+const vectorStore = await getVectorStore();
+
 const retrieveContext = async (query) => {
-  const vectorStore = await getVectorStore();
   const results = await vectorStore.similaritySearch(query, 5);
   return results;
 };
