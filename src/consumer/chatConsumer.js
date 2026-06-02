@@ -91,7 +91,7 @@ const queryReWriting = async (message) => {
 const processChat = async ({ message, phoneNumber }) => {
   try {
     const rewrittenQuery = await queryReWriting(message);
-    const relevantDocs = await retrieveContext(rewrittenQuery);
+    const relevantDocs = await retrieveContext(rewrittenQuery.content);
     const answer = await generateAnswer(message, relevantDocs);
 
     const relevantContext = relevantDocs.map((doc) => ({
