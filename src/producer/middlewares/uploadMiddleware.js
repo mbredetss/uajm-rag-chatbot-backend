@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const uploadDir = path.join(__dirname, '..', '..', '..', 'uploads');
 
-const ALLOWED_EXTENSIONS = ['.pdf', '.csv', '.docx'];
-const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_EXTENSIONS = ['.pdf', '.csv', '.docx', '.doc', '.jpg', '.jpeg', '.png', '.webp'];
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {

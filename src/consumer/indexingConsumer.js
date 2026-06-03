@@ -3,14 +3,16 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { TextLoader } from '@langchain/classic/document_loaders/fs/text';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
-import { RecursiveCharacterTextSplitter } from '@langchain/textsplitters';
 import { HuggingFaceInferenceEmbeddings } from '@langchain/community/embeddings/hf';
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
+import { HumanMessage } from '@langchain/core/messages';
+import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import pool from '../producer/utils/database.js';
+import * as fs from "fs";
 
-const splitter = new RecursiveCharacterTextSplitter({
-  chunkSize: 500,
-  chunkOverlap: 100,
+const model = new ChatGoogleGenerativeAI({
+  apiKey: process.env.GOOGLE_API_KEY,
+  model: 'gemini-3-flash-preview',
 });
 
 const embeddings = new HuggingFaceInferenceEmbeddings({
@@ -61,6 +63,38 @@ const loadDocument = async (source, type) => {
     return await loader.load();
   }
 
+  if (ext === '.jpg' || ext === '.png' || ext === '.jpeg' || ext === '.webp') {
+    const imageBase64 = fs.readFileSync(source, { encoding: "base64" });
+
+    const prompt = `
+    You are an AI assistant that analyzes document images.
+    You are tasked with extracting information from images.
+    The information you extract from the images will be fed into my knowledge base for the chatbot I am currently designing. If the image is a document, remove any unnecessary information and only extract the essential information.
+    Provide it in Indonesian and in paragraph format.
+    `;
+    
+    const message = new HumanMessage({
+      content: [    
+        { type : "text", text: prompt }, 
+        {
+          type: "image_url",
+          image_url: `data:image/${ext.slice(1)};base64,${imageBase64}`,
+        }
+      ], 
+    });
+    
+    const response = await model.invoke([message]);
+    
+    return [
+      {
+        pageContent: response.content,
+        metadata: {
+          source,
+        },
+      }
+    ];
+  }
+
   throw new Error(`Format dokumen tidak didukung: ${ext}`);
 };
 
@@ -82,8 +116,7 @@ const processIndexing = async ({ source, type, documentId }) => {
   try {
     const docs = await loadDocument(source, type);
     const cleanDocs = docsCleaning(docs);
-    const splitDocs = await splitter.splitDocuments(cleanDocs);
-    await vectorStore.addDocuments(splitDocs);
+    await vectorStore.addDocuments(cleanDocs);
     await updateDocumentStatus(documentId, 'completed');
     console.log(`Indexing selesai untuk dokumen ${documentId}`);
   } catch (error) {
