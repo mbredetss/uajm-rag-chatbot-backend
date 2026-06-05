@@ -131,6 +131,19 @@ const extractDesiredInformation = async (docs, desiredInformation) => {
     You are tasked with extracting information from documents based on the desired information.
     The results of your extraction will be entered into the knowledge base for my RAG chatbot. This is to ensure the knowledge base is of high quality (containing only the desired information).
     Therefore, do not extract any information other than the desired information. Make in Indonesian.
+    Here is a list of abbreviations may will appear in the documents:
+    - UAJM -> Universitas Atma Jaya Makassar
+    - BAPSI -> Biro Administrasi Perencanaan dan Pengembangan Sistem Informasi
+    - BAUK -> Biro Administrasi Umum dan Keuangan
+    - BAA -> Biro Administrasi Akademik & Kemahasiswaan
+    - LPPM -> Lembaga Penelitian dan Pengabdian kepada Masyarakat
+    - BKAM -> Biro Administrasi Hubungan Masyarakat, Kemahasiswaan dan Alumni
+    - FTI -> Fakultas Teknologi Informasi
+    - TI -> Teknik Informatika
+    - FEB -> Fakultas Ekonomi dan Bisnis
+    - BKD -> Beban Kerja Dosen
+    - TA -> Tugas Akhir
+    If the documents has an abbreviation that is not mentioned in the list above, then try changing the abbreviation to its full form in the academic scope.
     Here is the desired information: "${desiredInformation}"
     Here is the document: "${docs[0].pageContent}"
     `;
