@@ -72,19 +72,19 @@ const loadDocument = async (source, type) => {
     The information you extract from the images will be fed into my knowledge base for the chatbot I am currently designing. If the image is a document, remove any unnecessary information and only extract the essential information.
     Provide it in Indonesian and in paragraph format.
     `;
-    
+
     const message = new HumanMessage({
-      content: [    
-        { type : "text", text: prompt }, 
+      content: [
+        { type: "text", text: prompt },
         {
           type: "image_url",
           image_url: `data:image/${ext.slice(1)};base64,${imageBase64}`,
         }
-      ], 
+      ],
     });
-    
+
     const response = await model.invoke([message]);
-    
+
     return [
       {
         pageContent: response.content,
@@ -112,9 +112,38 @@ const docsCleaning = (docs) => {
   }));
 };
 
-const processIndexing = async ({ source, type, documentId }) => {
+const extractDesiredInformation = async (docs, desiredInformation) => {
+  const prompt = `
+    You are an AI assistant that extracts information from documents.
+    You are tasked with extracting information from documents based on the desired information.
+    The results of your extraction will be entered into the knowledge base for my RAG chatbot. This is to ensure the knowledge base is of high quality (containing only the desired information).
+    Therefore, do not extract any information other than the desired information. Make in Indonesian.
+    Here is the desired information: "${desiredInformation}"
+    Here is the document: "${docs[0].pageContent}"
+    `;
+
+  const message = new HumanMessage({
+    content: [
+      { type: "text", text: prompt },
+    ],
+  });
+
+  const response = await model.invoke([message]);
+
+  return [
+    {
+      ...docs[0],
+      pageContent: response.content,
+    }
+  ];
+}
+
+const processIndexing = async ({ desiredInformation, source, type, documentId }) => {
   try {
-    const docs = await loadDocument(source, type);
+    let docs = await loadDocument(source, type);
+    if (desiredInformation) {
+      docs = await extractDesiredInformation(docs, desiredInformation);
+    }
     const cleanDocs = docsCleaning(docs);
     await vectorStore.addDocuments(cleanDocs);
     await updateDocumentStatus(documentId, 'completed');

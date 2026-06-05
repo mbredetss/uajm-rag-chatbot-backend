@@ -16,6 +16,7 @@ exports.up = (pgm) => {
       notNull: true,
       default: pgm.func('current_timestamp'),
     },
+    error_message: { type: 'text', notNull: false },
   });
 };
 

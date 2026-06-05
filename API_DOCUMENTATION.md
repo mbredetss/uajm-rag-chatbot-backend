@@ -30,6 +30,7 @@ POST /documents
 | ------------ | -------- | ----- | --------------------------------------------------------------- |
 | `secretCode` | `string` | Ya    | Kode rahasia untuk otentikasi                                   |
 | `document`   | `file`   | Ya    | File dokumen. Format: `.pdf`, `.csv`, `.docx`. Maks: 10MB       |
+| `desiredInformation` | `string` | Tidak   | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
 
 ### Response Sukses
 
@@ -181,7 +182,17 @@ GET /documents
       "id": 1,
       "source": "D:\\mighdad\\...\\uploads\\1678901234-123456789.pdf",
       "type": "docs",
+      "error_message": null,
       "status": "completed",
+      "created_at": "2026-05-17T06:00:00.000Z",
+      "updated_at": "2026-05-17T06:01:00.000Z"
+    },
+    {
+      "id": 3,
+      "source": "D:\\mighdad\\...\\uploads\\1678901234-123456789.pdf",
+      "type": "docs",
+      "error_message": "error message",
+      "status": "failed",
       "created_at": "2026-05-17T06:00:00.000Z",
       "updated_at": "2026-05-17T06:01:00.000Z"
     },
@@ -189,6 +200,7 @@ GET /documents
       "id": 2,
       "source": "https://example.com/article",
       "type": "url",
+      "error_message": null,
       "status": "in progress",
       "created_at": "2026-05-17T06:05:00.000Z",
       "updated_at": "2026-05-17T06:05:00.000Z"

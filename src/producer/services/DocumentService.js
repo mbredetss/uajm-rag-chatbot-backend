@@ -17,6 +17,7 @@ const urlSchema = Joi.object({
 
 const documentSchema = Joi.object({
   secretCode: Joi.string().required(),
+  desiredInformation: Joi.string(),
 });
 
 const verifySecretCode = (secretCode) => {
@@ -27,7 +28,7 @@ const verifySecretCode = (secretCode) => {
 
 const addDocument = async (req) => {
   const file = req.file;
-  const { secretCode } = req.body;
+  const { secretCode, desiredInformation } = req.body;
 
   if (!file) {
     throw new ValidationError('Dokumen harus dikirim');
@@ -51,6 +52,7 @@ const addDocument = async (req) => {
   const document = result.rows[0];
 
   await publishToQueue(INDEXING_QUEUE, {
+    desiredInformation, 
     source,
     type,
     documentId: document.id,
