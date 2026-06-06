@@ -20,12 +20,6 @@ const documentSchema = Joi.object({
   desiredInformation: Joi.string(),
 });
 
-const verifySecretCode = (secretCode) => {
-  if (secretCode !== process.env.SECRET_CODE) {
-    throw new AuthenticationError('Kode rahasia tidak valid');
-  }
-};
-
 const addDocument = async (req) => {
   const file = req.file;
   const { secretCode, desiredInformation } = req.body;
@@ -38,8 +32,6 @@ const addDocument = async (req) => {
   if (error) {
     throw new ValidationError(error.details[0].message);
   }
-
-  verifySecretCode(secretCode);
 
   const source = file.path;
   const type = 'docs';
@@ -72,8 +64,6 @@ const addUrl = async (req) => {
   if (error) {
     throw new ValidationError(error.details[0].message);
   }
-
-  verifySecretCode(secretCode);
 
   const source = url;
   const type = 'url';
@@ -111,8 +101,6 @@ const deleteDocumentBySource = async (req) => {
   if (!secretCode) {
     throw new ValidationError('"secretCode" is required');
   }
-
-  verifySecretCode(secretCode);
 
   // Hapus dari vector store (langchain_pg_embedding) berdasarkan metadata.source
   const vectorResult = await pool.query(
