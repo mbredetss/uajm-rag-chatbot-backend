@@ -10,6 +10,7 @@ import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import pool from '../producer/utils/database.js';
 import * as fs from "fs";
 import { z } from "zod";
+import { traceable } from "langsmith/traceable";
 
 const model = new ChatGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_API_KEY,
@@ -126,7 +127,7 @@ const docsCleaning = (docs) => {
   }));
 };
 
-const extractDesiredInformation = async (docs, desiredInformation) => {
+const _extractDesiredInformation = async (docs, desiredInformation) => {
   const prompt = `
     You are an AI assistant that extracts information from documents.
     You are tasked with extracting information from documents based on the desired information.
@@ -167,11 +168,21 @@ const extractDesiredInformation = async (docs, desiredInformation) => {
   return [
     {
       ...docs[0],
-      pageContent: response.content, 
+      pageContent: response.content,
       isInformationAvailable: response.isInformationAvailable,
     }
   ];
-}
+};
+
+const extractDesiredInformation = traceable(
+  _extractDesiredInformation,
+  {
+    name: "extractDesiredInformation",
+    run_type: "llm",
+    tags: ["indexing", "information-extraction"],
+    metadata: { project: "uajm-rag-chatbot" },
+  }
+);
 
 const processIndexing = async ({ desiredInformation, source, type, documentId }) => {
   try {
