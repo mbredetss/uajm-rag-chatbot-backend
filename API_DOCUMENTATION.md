@@ -20,17 +20,17 @@ POST /documents
 
 ### Headers
 
-| Header         | Nilai                  | Keterangan |
-| -------------- | ---------------------- | ---------- |
-| `Content-Type` | `multipart/form-data`  | Wajib      |
+| Header          | Nilai                  | Keterangan |
+| --------------- | ---------------------- | ---------- |
+| `Content-Type`  | `multipart/form-data`  | Wajib      |
+| `Authorization` | `Bearer <accessToken>` | Wajib      |
 
 ### Request Body (multipart/form-data)
 
-| Field        | Tipe     | Wajib | Keterangan                                                      |
-| ------------ | -------- | ----- | --------------------------------------------------------------- |
-| `secretCode` | `string` | Ya    | Kode rahasia untuk otentikasi                                   |
-| `document`   | `file`   | Ya    | File dokumen. Format: `.pdf`, `.csv`, `.docx`. Maks: 10MB       |
-| `desiredInformation` | `string` | Tidak   | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
+| Field                | Tipe     | Wajib | Keterangan                                                              |
+| -------------------- | -------- | ----- | ----------------------------------------------------------------------- |
+| `document`           | `file`   | Ya    | File dokumen. Format: `.pdf`, `.csv`, `.docx`. Maks: 10MB               |
+| `desiredInformation` | `string` | Tidak | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
 
 ### Response Sukses
 
@@ -53,6 +53,13 @@ POST /documents
 
 ### Response Error
 
+**Token tidak disertakan atau tidak valid:**
+
+```json
+{ "status": "fail", "message": "Unauthorized" }
+```
+Status: `401 Unauthorized`
+
 **Dokumen kosong:**
 
 ```json
@@ -74,13 +81,6 @@ Status: `400 Bad Request`
 ```
 Status: `400 Bad Request`
 
-**Kode rahasia tidak valid:**
-
-```json
-{ "status": "fail", "message": "Kode rahasia tidak valid" }
-```
-Status: `401 Unauthorized`
-
 ---
 
 ## 2. Upload URL
@@ -95,22 +95,21 @@ POST /urls
 
 ### Headers
 
-| Header         | Nilai               | Keterangan |
-| -------------- | ------------------- | ---------- |
-| `Content-Type` | `application/json`  | Wajib      |
+| Header          | Nilai               | Keterangan |
+| --------------- | ------------------- | ---------- |
+| `Content-Type`  | `application/json`  | Wajib      |
+| `Authorization` | `Bearer <accessToken>` | Wajib   |
 
 ### Request Body (JSON)
 
-| Field        | Tipe     | Wajib | Keterangan                                    |
-| ------------ | -------- | ----- | --------------------------------------------- |
-| `secretCode` | `string` | Ya    | Kode rahasia untuk otentikasi                 |
-| `url`        | `string` | Ya    | URL website yang akan diindeks (format valid)  |
+| Field | Tipe     | Wajib | Keterangan                                   |
+| ----- | -------- | ----- | -------------------------------------------- |
+| `url` | `string` | Ya    | URL website yang akan diindeks (format valid) |
 
 ### Contoh Request
 
 ```json
 {
-  "secretCode": "your_secret_code",
   "url": "https://example.com/article"
 }
 ```
@@ -136,6 +135,13 @@ POST /urls
 
 ### Response Error
 
+**Token tidak disertakan atau tidak valid:**
+
+```json
+{ "status": "fail", "message": "Unauthorized" }
+```
+Status: `401 Unauthorized`
+
 **URL kosong:**
 
 ```json
@@ -150,13 +156,6 @@ Status: `400 Bad Request`
 ```
 Status: `400 Bad Request`
 
-**Kode rahasia tidak valid:**
-
-```json
-{ "status": "fail", "message": "Kode rahasia tidak valid" }
-```
-Status: `401 Unauthorized`
-
 ---
 
 ## 3. Lihat Status Dokumen
@@ -168,6 +167,12 @@ Mengambil daftar semua dokumen/URL beserta statusnya (in progress, completed, fa
 ```
 GET /documents
 ```
+
+### Headers
+
+| Header          | Nilai                  | Keterangan |
+| --------------- | ---------------------- | ---------- |
+| `Authorization` | `Bearer <accessToken>` | Wajib      |
 
 ### Response Sukses
 
@@ -209,6 +214,14 @@ GET /documents
 }
 ```
 
+### Response Error
+
+**Token tidak disertakan atau tidak valid:**
+
+```json
+{ "status": "fail", "message": "Unauthorized" }
+```
+Status: `401 Unauthorized`
 
 ---
 
@@ -224,22 +237,21 @@ DELETE /documents
 
 ### Headers
 
-| Header         | Nilai               | Keterangan |
-| -------------- | ------------------- | ---------- |
-| `Content-Type` | `application/json`  | Wajib      |
+| Header          | Nilai               | Keterangan |
+| --------------- | ------------------- | ---------- |
+| `Content-Type`  | `application/json`  | Wajib      |
+| `Authorization` | `Bearer <accessToken>` | Wajib   |
 
 ### Request Body (JSON)
 
-| Field        | Tipe     | Wajib | Keterangan                                                 |
-| ------------ | -------- | ----- | ---------------------------------------------------------- |
-| `secretCode` | `string` | Ya    | Kode rahasia untuk otentikasi                              |
-| `source`     | `string` | Ya    | Path dokumen lokal atau URL website yang ingin dihapus     |
+| Field    | Tipe     | Wajib | Keterangan                                             |
+| -------- | -------- | ----- | ------------------------------------------------------ |
+| `source` | `string` | Ya    | Path dokumen lokal atau URL website yang ingin dihapus |
 
 ### Contoh Request
 
 ```json
 {
-  "secretCode": "your_secret_code",
   "source": "https://example.com/article"
 }
 ```
@@ -261,32 +273,19 @@ DELETE /documents
 
 ### Response Error
 
-**Source atau secretCode kosong:**
+**Token tidak disertakan atau tidak valid:**
 
 ```json
-{
-  "status": "fail",
-  "message": "Source harus dikirim"
-}
-```
-atau
-```json
-{
-  "status": "fail",
-  "message": "\"secretCode\" is required"
-}
-```
-Status: `400 Bad Request`
-
-**Kode rahasia tidak valid:**
-
-```json
-{
-  "status": "fail",
-  "message": "Kode rahasia tidak valid"
-}
+{ "status": "fail", "message": "Unauthorized" }
 ```
 Status: `401 Unauthorized`
+
+**Source kosong:**
+
+```json
+{ "status": "fail", "message": "Source harus dikirim" }
+```
+Status: `400 Bad Request`
 
 **Dokumen tidak ditemukan:**
 
@@ -502,6 +501,8 @@ Status: `400 Bad Request`
 
 Membuat akun pengguna baru. Endpoint ini digunakan untuk mendaftarkan admin baru ke sistem.
 
+> **Akses:** Hanya dapat diakses oleh pengguna dengan role `super admin`.
+
 ### Endpoint
 
 ```
@@ -510,9 +511,10 @@ POST /users
 
 ### Headers
 
-| Header         | Nilai               | Keterangan |
-| -------------- | ------------------- | ---------- |
-| `Content-Type` | `application/json`  | Wajib      |
+| Header          | Nilai               | Keterangan                           |
+| --------------- | ------------------- | ------------------------------------ |
+| `Content-Type`  | `application/json`  | Wajib                                |
+| `Authorization` | `Bearer <accessToken>` | Wajib — token dengan role `super admin` |
 
 ### Request Body (JSON)
 
@@ -547,6 +549,20 @@ POST /users
 ```
 
 ### Response Error
+
+**Token tidak disertakan atau tidak valid:**
+
+```json
+{ "status": "fail", "message": "Unauthorized" }
+```
+Status: `401 Unauthorized`
+
+**Role bukan `super admin`:**
+
+```json
+{ "status": "fail", "message": "Akses ditolak. Anda tidak memiliki hak akses sebagai admin" }
+```
+Status: `403 Forbidden`
 
 **Username sudah digunakan:**
 
