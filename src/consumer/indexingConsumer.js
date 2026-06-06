@@ -40,7 +40,7 @@ const getVectorStore = async () => {
 
 const vectorStore = await getVectorStore();
 
-const loadDocument = async (source, type) => {
+const _loadDocument = async (source, type) => {
   if (type === 'url') {
     const loader = new CheerioWebBaseLoader(source, {
       selector: 'p, ol, h1, h2, h3, h4, h5, h6',
@@ -112,6 +112,16 @@ const loadDocument = async (source, type) => {
 
   throw new Error(`Format dokumen tidak didukung: ${ext}`);
 };
+
+const loadDocument = traceable(
+  _loadDocument,
+  {
+    name: "loadDocument",
+    run_type: "chain",
+    tags: ["indexing", "document-loading"],
+    metadata: { project: "uajm-rag-chatbot" },
+  }
+);
 
 const updateDocumentStatus = async (documentId, status) => {
   await pool.query(
