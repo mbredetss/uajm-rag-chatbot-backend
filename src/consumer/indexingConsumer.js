@@ -121,7 +121,7 @@ const updateDocumentStatus = async (documentId, status) => {
 
 const docsCleaning = (docs) => {
   return docs.map(doc => ({
-    ...doc, 
+    ...doc,
     pageContent: doc.pageContent.replace(/[\n\r\t]/g, ' '),
   }));
 };
@@ -151,8 +151,8 @@ const extractDesiredInformation = async (docs, desiredInformation) => {
 
   const modelWithStructure = model.withStructuredOutput(
     z.object({
-      content: z.string().describe("The extracted information."), 
-      isInformationAvailable: z.boolean().describe("Is the desired information present in the document? False if not, true if present"), 
+      content: z.string().describe("The extracted information."),
+      isInformationAvailable: z.boolean().describe("Is the desired information present in the document? False if not, true if present"),
     })
   );
 
@@ -167,7 +167,8 @@ const extractDesiredInformation = async (docs, desiredInformation) => {
   return [
     {
       ...docs[0],
-      pageContent: response.content,
+      pageContent: response.content, 
+      isInformationAvailable: response.isInformationAvailable,
     }
   ];
 }
@@ -177,9 +178,9 @@ const processIndexing = async ({ desiredInformation, source, type, documentId })
     let docs = await loadDocument(source, type);
     if (desiredInformation) {
       const result = await extractDesiredInformation(docs, desiredInformation);
-      const {content, isInformationAvailable} = result;
+      const { isInformationAvailable } = result[0];
       if (!isInformationAvailable) throw new Error('Informasi yang diinginkan tidak ditemukan dalam dokumen.');
-      docs = content;
+      docs = result;
     }
     const cleanDocs = docsCleaning(docs);
     await vectorStore.addDocuments(cleanDocs);
