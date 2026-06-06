@@ -8,6 +8,8 @@
  * @returns {Promise<void> | void}
  */
 export const up = (pgm) => {
+  pgm.createType('user_role', ['super admin', 'admin']);
+
   pgm.createTable('users', {
     id: {
       type: 'CHAR(21)',
@@ -25,6 +27,11 @@ export const up = (pgm) => {
     fullName: {
       type: 'VARCHAR(140)',
       notNull: true
+    },
+    role: {
+      type: 'user_role',
+      notNull: true,
+      default: 'admin'
     },
     createdAt: {
       type: 'TIMESTAMPTZ',
@@ -45,5 +52,6 @@ export const up = (pgm) => {
  * @returns {Promise<void> | void}
  */
 export const down = (pgm) => {
+  pgm.dropType('user_role');
   pgm.dropTable('users');
 };
