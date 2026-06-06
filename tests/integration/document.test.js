@@ -32,7 +32,7 @@ const { publishToQueue } = await import('../../src/producer/utils/rabbitmq.js');
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 
 // Generate valid access token for testing
-const generateTestToken = (payload = { id: 'user-test-123', role: 'admin' }) => {
+const generateTestToken = (payload = { id: 'user-yOHAMYOkHHP2pRq3', role: 'admin' }) => {
   return jwt.sign(payload, process.env.ACCESS_TOKEN_KEY);
 };
 
@@ -264,9 +264,11 @@ describe('Document API', () => {
       expect(res.body.data.source).toBe('https://example.com');
       expect(res.body.data.status).toBe('in progress');
       expect(publishToQueue).toHaveBeenCalledWith('indexing_queue', {
+        "desiredInformation": undefined, 
         source: 'https://example.com',
         type: 'url',
-        documentId: res.body.data.id,
+        documentId: res.body.data.id, 
+        "username": "auth_test_1780739607494",
       });
     });
   });

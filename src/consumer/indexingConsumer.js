@@ -123,10 +123,10 @@ const loadDocument = traceable(
   }
 );
 
-const updateDocumentStatus = async (documentId, status) => {
+const updateDocumentStatus = async (documentId, status, errorMessage) => {
   await pool.query(
-    'UPDATE documents SET status = $1, updated_at = NOW() WHERE id = $2',
-    [status, documentId],
+    'UPDATE documents SET status = $1, updated_at = NOW(), error_message = $2 WHERE id = $3',
+    [status, errorMessage, documentId],
   );
 };
 
@@ -209,7 +209,7 @@ const processIndexing = async ({ desiredInformation, source, type, documentId })
     console.log(`Indexing selesai untuk dokumen ${documentId}`);
   } catch (error) {
     console.error(`Indexing gagal untuk dokumen ${documentId}:`, error);
-    await updateDocumentStatus(documentId, 'failed');
+    await updateDocumentStatus(documentId, 'failed', error.message);
   }
 };
 
