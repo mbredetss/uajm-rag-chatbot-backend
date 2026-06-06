@@ -34,21 +34,19 @@ const addDocument = async (req) => {
 
   const source = file.path;
   const type = 'docs';
+  const { id } = req.user;
+  const fullName = await userRepositories.getFullNameById(id);
 
   const result = await pool.query(
-    'INSERT INTO documents (source, type, status) VALUES ($1, $2, $3) RETURNING *',
-    [source, type, 'in progress'],
+    'INSERT INTO documents (source, type, status, username) VALUES ($1, $2, $3, $4) RETURNING *',
+    [source, type, 'in progress', fullName],
   );
 
   const document = result.rows[0];
 
-  const { id } = req.user;
-  const username = await userRepositories.getUsername(id);
-
   await publishToQueue(INDEXING_QUEUE, {
     desiredInformation,
     source,
-    username,
     type,
     documentId: document.id,
   });
@@ -70,21 +68,20 @@ const addUrl = async (req) => {
 
   const source = url;
   const type = 'url';
+  const { id } = req.user;
+  const fullName = await userRepositories.getFullNameById(id);
 
   const result = await pool.query(
-    'INSERT INTO documents (source, type, status) VALUES ($1, $2, $3) RETURNING *',
-    [source, type, 'in progress'],
+    `INSERT INTO documents (source, type, status, username) VALUES ($1, $2, $3, $4) RETURNING *`,
+    [source, type, 'in progress', fullName],
   );
 
   const document = result.rows[0];
-  const { id } = req.user;
-  const username = await userRepositories.getUsername(id);
 
   await publishToQueue(INDEXING_QUEUE, {
     desiredInformation,
     source,
     type,
-    username,
     documentId: document.id,
   });
 

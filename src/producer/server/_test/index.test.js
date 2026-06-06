@@ -1,6 +1,8 @@
 import request from 'supertest';
 import { describe, it, beforeAll, afterAll } from 'vitest';
 import app from '../index.js';
+import AuthenticationsTableTestHelper from '../../../../tests/AuthenticationsTableTestHelper.js';
+import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper.js';
 
 describe('HTTP Server', () => {
     describe('when GET /', () => {
@@ -44,6 +46,11 @@ describe('HTTP Server', () => {
 
     describe('when POST /users', () => {
         let superAdminToken = null;
+
+        afterAll(async () => {
+            await AuthenticationsTableTestHelper.cleanTable();
+            await UsersTableTestHelper.cleanTable();
+        });
 
         beforeAll(async () => {
             // Login sebagai super admin untuk mendapatkan token

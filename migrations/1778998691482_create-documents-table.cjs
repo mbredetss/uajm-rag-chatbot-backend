@@ -17,6 +17,7 @@ exports.up = (pgm) => {
       default: pgm.func('current_timestamp'),
     },
     error_message: { type: 'text', notNull: false },
+    username: { type: 'varchar(100)', notNull: true },
   });
 };
 

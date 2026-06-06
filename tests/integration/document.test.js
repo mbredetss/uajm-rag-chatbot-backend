@@ -2,7 +2,6 @@ import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import jwt from 'jsonwebtoken';
 
 // Mock RabbitMQ before importing app
 vi.mock('../../src/producer/utils/rabbitmq.js', () => ({
@@ -17,8 +16,6 @@ const __dirname = path.dirname(__filename);
 
 // Set env for testing
 process.env.VERIFY_TOKEN = 'test_verify_token';
-process.env.ACCESS_TOKEN_KEY = process.env.ACCESS_TOKEN_KEY || 'test_access_token_key_secret';
-process.env.REFRESH_TOKEN_KEY = process.env.REFRESH_TOKEN_KEY || 'test_refresh_token_key_secret';
 process.env.PGHOST = process.env.PGHOST || 'localhost';
 process.env.PGPORT = process.env.PGPORT || '5432';
 process.env.PGUSER = process.env.PGUSER || 'postgres';
@@ -31,10 +28,6 @@ const { publishToQueue } = await import('../../src/producer/utils/rabbitmq.js');
 
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 
-// Generate valid access token for testing
-const generateTestToken = (payload = { id: 'user-yOHAMYOkHHP2pRq3', role: 'admin' }) => {
-  return jwt.sign(payload, process.env.ACCESS_TOKEN_KEY);
-};
 
 // HTTP test helper — mendukung opsional token untuk Authorization header
 const request = async (method, urlPath, options = {}) => {
@@ -69,7 +62,15 @@ describe('Document API', () => {
   let validToken;
 
   beforeAll(async () => {
-    validToken = generateTestToken();
+    // Login sebagai super admin untuk mendapatkan access token
+    const loginRes = await request('POST', '/authentications', {
+      body: JSON.stringify({
+        username: 'super_admin',
+        password: 'sampurnasurya882@',
+      }),
+      headers: { 'Content-Type': 'application/json' },
+    });
+    validToken = loginRes.body.data?.accessToken;
 
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
@@ -78,7 +79,8 @@ describe('Document API', () => {
       CREATE TABLE IF NOT EXISTS documents (
         id SERIAL PRIMARY KEY,
         source VARCHAR(500) NOT NULL,
-        type VARCHAR(10) NOT NULL,
+        type VARCHAR(10) NOT NULL, 
+        username VARCHAR(100) NOT NULL, 
         status VARCHAR(20) NOT NULL DEFAULT 'in progress',
         created_at TIMESTAMP DEFAULT NOW(),
         updated_at TIMESTAMP DEFAULT NOW()
@@ -264,11 +266,10 @@ describe('Document API', () => {
       expect(res.body.data.source).toBe('https://example.com');
       expect(res.body.data.status).toBe('in progress');
       expect(publishToQueue).toHaveBeenCalledWith('indexing_queue', {
-        "desiredInformation": undefined, 
+        "desiredInformation": undefined,
         source: 'https://example.com',
         type: 'url',
-        documentId: res.body.data.id, 
-        "username": "auth_test_1780739607494",
+        documentId: res.body.data.id,
       });
     });
   });
@@ -297,10 +298,10 @@ describe('Document API', () => {
 
     it('should return all documents', async () => {
       await pool.query(
-        "INSERT INTO documents (source, type, status) VALUES ('test.pdf', 'docs', 'completed')",
+        "INSERT INTO documents (source, type, status, username) VALUES ('test.pdf', 'docs', 'completed', 'user')",
       );
       await pool.query(
-        "INSERT INTO documents (source, type, status) VALUES ('https://example.com', 'url', 'in progress')",
+        "INSERT INTO documents (source, type, status, username) VALUES ('https://example.com', 'url', 'in progress', 'user')",
       );
 
       const res = await request('GET', '/documents', { token: validToken });
@@ -332,7 +333,7 @@ describe('Document API', () => {
 
     it('should delete document by source successfully', async () => {
       await pool.query(
-        "INSERT INTO documents (source, type, status) VALUES ('uploads/test.pdf', 'docs', 'completed')",
+        "INSERT INTO documents (source, type, status, username) VALUES ('uploads/test.pdf', 'docs', 'completed', 'user')",
       );
       await pool.query(
         `INSERT INTO langchain_pg_embedding (content, metadata) VALUES ('test content', '{"source": "uploads/test.pdf"}'::jsonb)`,

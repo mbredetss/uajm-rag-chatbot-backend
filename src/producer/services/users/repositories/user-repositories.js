@@ -33,13 +33,13 @@ class UserRepositories {
     return result.rows[0];
   }
 
-  async getUsername(id) {
+  async getFullNameById(id) {
     const result = await pool.query(
-      `SELECT username FROM users
+      `SELECT "fullName" FROM users
             WHERE id = $1`, [id]
     );
 
-    return result.rows[0].username;
+    return result.rows[0].fullName;
   }
 }
 

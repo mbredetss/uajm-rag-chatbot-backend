@@ -43,7 +43,8 @@ POST /documents
   "data": {
     "id": 1,
     "source": "D:\\mighdad\\...\\uploads\\1678901234-123456789.pdf",
-    "type": "docs",
+    "type": "docs", 
+    "username": "full name user", 
     "status": "in progress",
     "created_at": "2026-05-17T06:00:00.000Z",
     "updated_at": "2026-05-17T06:00:00.000Z"
@@ -127,6 +128,7 @@ POST /urls
     "id": 2,
     "source": "https://example.com/article",
     "type": "url",
+    "username": "full name user",
     "status": "in progress",
     "created_at": "2026-05-17T06:05:00.000Z",
     "updated_at": "2026-05-17T06:05:00.000Z"
@@ -161,7 +163,7 @@ Status: `400 Bad Request`
 
 ## 3. Lihat Status Dokumen
 
-Mengambil daftar semua dokumen/URL beserta statusnya (in progress, completed, failed).
+Mengambil daftar semua dokumen/URL beserta statusnya (in progress, completed, failed) dan nama full name yang mengunggah dokumen/URL tersebut.
 
 ### Endpoint
 
@@ -187,6 +189,7 @@ GET /documents
     {
       "id": 1,
       "source": "D:\\mighdad\\...\\uploads\\1678901234-123456789.pdf",
+      "username": "full name user",
       "type": "docs",
       "error_message": null,
       "status": "completed",
@@ -196,6 +199,7 @@ GET /documents
     {
       "id": 3,
       "source": "D:\\mighdad\\...\\uploads\\1678901234-123456789.pdf",
+      "username": "full name user",
       "type": "docs",
       "error_message": "error message",
       "status": "failed",
@@ -205,6 +209,7 @@ GET /documents
     {
       "id": 2,
       "source": "https://example.com/article",
+      "username": "full name user",
       "type": "url",
       "error_message": null,
       "status": "in progress",
