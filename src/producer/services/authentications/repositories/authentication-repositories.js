@@ -25,7 +25,7 @@ class AuthenticationRepositories {
 
   async verifyUserCredential(username) {
     const result = await pool.query(
-      'SELECT id, password FROM users WHERE username = $1', [username]
+      'SELECT id, password, role FROM users WHERE username = $1', [username]
     );
 
     return result.rows[0];

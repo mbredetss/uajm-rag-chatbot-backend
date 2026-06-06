@@ -12,15 +12,16 @@ export const login = async (req, res) => {
     const isCredentialValid = await bcrypt.compare(password, user.password);
 
     if (isCredentialValid) {
-      const id = user.id;
-      const accessToken = TokenManager.generateAccessToken({ id });
-      const refreshToken = TokenManager.generateRefreshToken({ id });
+      const { id, role } = user;
+      const accessToken = TokenManager.generateAccessToken({ id, role });
+      const refreshToken = TokenManager.generateRefreshToken({ id, role });
 
       await authenticationRepositories.addRefreshToken(refreshToken);
 
       return response(res, 201, null, {
         accessToken,
-        refreshToken
+        refreshToken,
+        role
       });
     }
     return response(res, 401, 'Username atau password salah!', null);
@@ -36,8 +37,8 @@ export const newAccessToken = async (req, res) => {
 
   if (isRefreshTokenValid) {
     try {
-      const { id } = TokenManager.verifyRefreshToken(refreshToken);
-      const accessToken = TokenManager.generateAccessToken({ id });
+      const { id, role } = TokenManager.verifyRefreshToken(refreshToken);
+      const accessToken = TokenManager.generateAccessToken({ id, role });
 
       return response(res, 200, null, { accessToken });
     } catch {
