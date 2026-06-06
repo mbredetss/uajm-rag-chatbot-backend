@@ -18,9 +18,7 @@
     "test:watch": "vitest run --watch",
     "test:coverate": "vitest run --coverage",
     "test": "vitest",
-    "migrate:up": "node-pg-migrate up",
-    "migrate:down": "node-pg-migrate down",
-    "migrate:create": "node-pg-migrate create",
+    "migrate": "node-pg-migrate",
     "createDataset": "node ./evaluation/createDataset.js",
     "evaluate": "node ./evaluation/evaluation.js"
   },
