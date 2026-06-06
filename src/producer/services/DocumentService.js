@@ -2,7 +2,6 @@ import Joi from 'joi';
 import pool from '../utils/database.js';
 import { publishToQueue } from '../utils/rabbitmq.js';
 import ValidationError from '../exceptions/ValidationError.js';
-import AuthenticationError from '../exceptions/AuthenticationError.js';
 import NotFoundError from '../exceptions/NotFoundError.js';
 
 const INDEXING_QUEUE = 'indexing_queue';
@@ -12,25 +11,18 @@ const urlSchema = Joi.object({
     'string.uri': 'Format URL tidak valid',
     'any.required': 'URL harus diisi',
   }),
-  secretCode: Joi.string().required(),
 });
 
 const documentSchema = Joi.object({
-  secretCode: Joi.string().required(),
   desiredInformation: Joi.string(),
 });
 
 const addDocument = async (req) => {
   const file = req.file;
-  const { secretCode, desiredInformation } = req.body;
+  const { desiredInformation } = req.body;
 
   if (!file) {
     throw new ValidationError('Dokumen harus dikirim');
-  }
-
-  const { error } = documentSchema.validate({ secretCode });
-  if (error) {
-    throw new ValidationError(error.details[0].message);
   }
 
   const source = file.path;
@@ -54,13 +46,13 @@ const addDocument = async (req) => {
 };
 
 const addUrl = async (req) => {
-  const { url, secretCode } = req.body;
+  const { url } = req.body;
 
   if (!url) {
     throw new ValidationError('URL harus dikirim');
   }
 
-  const { error } = urlSchema.validate({ url, secretCode });
+  const { error } = urlSchema.validate({ url });
   if (error) {
     throw new ValidationError(error.details[0].message);
   }
@@ -92,14 +84,10 @@ const getAllDocuments = async () => {
 };
 
 const deleteDocumentBySource = async (req) => {
-  const { source, secretCode } = req.body;
+  const { source } = req.body;
 
   if (!source) {
     throw new ValidationError('Source harus dikirim');
-  }
-
-  if (!secretCode) {
-    throw new ValidationError('"secretCode" is required');
   }
 
   // Hapus dari vector store (langchain_pg_embedding) berdasarkan metadata.source

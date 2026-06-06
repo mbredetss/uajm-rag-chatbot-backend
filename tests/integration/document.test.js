@@ -2,6 +2,7 @@ import { describe, it, expect, vi, beforeAll, afterAll, afterEach } from 'vitest
 import fs from 'fs';
 import path from 'path';
 import { fileURLToPath } from 'url';
+import jwt from 'jsonwebtoken';
 
 // Mock RabbitMQ before importing app
 vi.mock('../../src/producer/utils/rabbitmq.js', () => ({
@@ -15,8 +16,9 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 // Set env for testing
-process.env.SECRET_CODE = 'test_secret';
 process.env.VERIFY_TOKEN = 'test_verify_token';
+process.env.ACCESS_TOKEN_KEY = process.env.ACCESS_TOKEN_KEY || 'test_access_token_key_secret';
+process.env.REFRESH_TOKEN_KEY = process.env.REFRESH_TOKEN_KEY || 'test_refresh_token_key_secret';
 process.env.PGHOST = process.env.PGHOST || 'localhost';
 process.env.PGPORT = process.env.PGPORT || '5432';
 process.env.PGUSER = process.env.PGUSER || 'postgres';
@@ -29,7 +31,12 @@ const { publishToQueue } = await import('../../src/producer/utils/rabbitmq.js');
 
 const uploadDir = path.join(__dirname, '..', '..', 'uploads');
 
-// Simple HTTP test helper
+// Generate valid access token for testing
+const generateTestToken = (payload = { id: 'user-test-123', role: 'admin' }) => {
+  return jwt.sign(payload, process.env.ACCESS_TOKEN_KEY);
+};
+
+// HTTP test helper — mendukung opsional token untuk Authorization header
 const request = async (method, urlPath, options = {}) => {
   const server = app.listen(0);
   const address = server.address();
@@ -40,8 +47,9 @@ const request = async (method, urlPath, options = {}) => {
     if (options.body) {
       fetchOptions.body = options.body;
     }
-    if (options.headers) {
-      fetchOptions.headers = options.headers;
+    fetchOptions.headers = options.headers || {};
+    if (options.token) {
+      fetchOptions.headers['Authorization'] = `Bearer ${options.token}`;
     }
     const res = await fetch(`${baseUrl}${urlPath}`, fetchOptions);
     const contentType = res.headers.get('content-type');
@@ -58,11 +66,14 @@ const request = async (method, urlPath, options = {}) => {
 };
 
 describe('Document API', () => {
+  let validToken;
+
   beforeAll(async () => {
+    validToken = generateTestToken();
+
     if (!fs.existsSync(uploadDir)) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
-    // Ensure tables exist
     await pool.query(`
       CREATE TABLE IF NOT EXISTS documents (
         id SERIAL PRIMARY KEY,
@@ -86,10 +97,8 @@ describe('Document API', () => {
   });
 
   afterEach(async () => {
-    // Clean up database
     await pool.query('DELETE FROM documents');
     await pool.query('DELETE FROM langchain_pg_embedding');
-    // Clean up uploaded files
     if (fs.existsSync(uploadDir)) {
       const files = fs.readdirSync(uploadDir);
       for (const file of files) {
@@ -105,27 +114,36 @@ describe('Document API', () => {
     await pool.end();
   });
 
+  // ─────────────────────────────────────────
+  // POST /documents
+  // ─────────────────────────────────────────
   describe('POST /documents (upload file)', () => {
-    it('should reject when no document is sent', async () => {
+    it('should reject with 401 when no access token is provided', async () => {
       const formData = new FormData();
-      formData.append('secretCode', 'test_secret');
-
-      const res = await request('POST', '/documents', { body: formData });
-      expect(res.status).toBe(400);
-      expect(res.body.message).toBe('Dokumen harus dikirim');
-    });
-
-    it('should reject when secret code is invalid', async () => {
-      const pdfContent = Buffer.from('%PDF-1.4 dummy content');
-      const blob = new Blob([pdfContent], { type: 'application/pdf' });
-
-      const formData = new FormData();
-      formData.append('document', blob, 'test.pdf');
-      formData.append('secretCode', 'wrong_secret');
+      formData.append('document', new Blob(['dummy'], { type: 'application/pdf' }), 'test.pdf');
 
       const res = await request('POST', '/documents', { body: formData });
       expect(res.status).toBe(401);
-      expect(res.body.message).toBe('Kode rahasia tidak valid');
+    });
+
+    it('should reject with 401 when access token is invalid', async () => {
+      const formData = new FormData();
+      formData.append('document', new Blob(['dummy'], { type: 'application/pdf' }), 'test.pdf');
+
+      const res = await request('POST', '/documents', {
+        body: formData,
+        token: 'invalid.token.here',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('should reject when no document is sent', async () => {
+      const res = await request('POST', '/documents', {
+        body: new FormData(),
+        token: validToken,
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.message).toBe('Dokumen harus dikirim');
     });
 
     it('should upload PDF document successfully', async () => {
@@ -134,9 +152,11 @@ describe('Document API', () => {
 
       const formData = new FormData();
       formData.append('document', blob, 'test.pdf');
-      formData.append('secretCode', 'test_secret');
 
-      const res = await request('POST', '/documents', { body: formData });
+      const res = await request('POST', '/documents', {
+        body: formData,
+        token: validToken,
+      });
       expect(res.status).toBe(201);
       expect(res.body.data.type).toBe('docs');
       expect(res.body.data.status).toBe('in progress');
@@ -147,79 +167,86 @@ describe('Document API', () => {
     });
 
     it('should upload CSV document successfully', async () => {
-      const csvContent = Buffer.from('col1,col2\nval1,val2');
-      const blob = new Blob([csvContent], { type: 'text/csv' });
+      const blob = new Blob([Buffer.from('col1,col2\nval1,val2')], { type: 'text/csv' });
 
       const formData = new FormData();
       formData.append('document', blob, 'test.csv');
-      formData.append('secretCode', 'test_secret');
 
-      const res = await request('POST', '/documents', { body: formData });
+      const res = await request('POST', '/documents', {
+        body: formData,
+        token: validToken,
+      });
       expect(res.status).toBe(201);
       expect(res.body.data.type).toBe('docs');
     });
 
     it('should upload DOCX document successfully', async () => {
-      const docxContent = Buffer.from('dummy docx content');
-      const blob = new Blob([docxContent], { type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document' });
+      const blob = new Blob([Buffer.from('dummy docx content')], {
+        type: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+      });
 
       const formData = new FormData();
       formData.append('document', blob, 'test.docx');
-      formData.append('secretCode', 'test_secret');
 
-      const res = await request('POST', '/documents', { body: formData });
+      const res = await request('POST', '/documents', {
+        body: formData,
+        token: validToken,
+      });
       expect(res.status).toBe(201);
       expect(res.body.data.type).toBe('docs');
     });
 
     it('should reject unsupported file format', async () => {
-      const txtContent = Buffer.from('hello');
-      const blob = new Blob([txtContent], { type: 'text/plain' });
+      const blob = new Blob([Buffer.from('hello')], { type: 'text/plain' });
 
       const formData = new FormData();
       formData.append('document', blob, 'test.txt');
-      formData.append('secretCode', 'test_secret');
 
-      const res = await request('POST', '/documents', { body: formData });
+      const res = await request('POST', '/documents', {
+        body: formData,
+        token: validToken,
+      });
       expect(res.status).toBe(400);
       expect(res.body.message).toContain('Format dokumen tidak diizinkan');
     });
-
-    it('should reject when secretCode is missing', async () => {
-      const pdfContent = Buffer.from('%PDF-1.4 dummy content');
-      const blob = new Blob([pdfContent], { type: 'application/pdf' });
-
-      const formData = new FormData();
-      formData.append('document', blob, 'test.pdf');
-
-      const res = await request('POST', '/documents', { body: formData });
-      expect(res.status).toBe(400);
-    });
   });
 
+  // ─────────────────────────────────────────
+  // POST /urls
+  // ─────────────────────────────────────────
   describe('POST /urls (upload URL)', () => {
+    it('should reject with 401 when no access token is provided', async () => {
+      const res = await request('POST', '/urls', {
+        body: JSON.stringify({ url: 'https://example.com' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('should reject with 401 when access token is invalid', async () => {
+      const res = await request('POST', '/urls', {
+        body: JSON.stringify({ url: 'https://example.com' }),
+        headers: { 'Content-Type': 'application/json' },
+        token: 'invalid.token.here',
+      });
+      expect(res.status).toBe(401);
+    });
+
     it('should reject when no URL is sent', async () => {
       const res = await request('POST', '/urls', {
-        body: JSON.stringify({ secretCode: 'test_secret' }),
+        body: JSON.stringify({}),
         headers: { 'Content-Type': 'application/json' },
+        token: validToken,
       });
       expect(res.status).toBe(400);
       expect(res.body.message).toBe('URL harus dikirim');
     });
 
-    it('should reject when secret code is invalid', async () => {
-      const res = await request('POST', '/urls', {
-        body: JSON.stringify({ url: 'https://example.com', secretCode: 'wrong_secret' }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      expect(res.status).toBe(401);
-      expect(res.body.message).toBe('Kode rahasia tidak valid');
-    });
-
     it('should reject when URL format is invalid', async () => {
       const res = await request('POST', '/urls', {
-        body: JSON.stringify({ url: 'not-a-url', secretCode: 'test_secret' }),
+        body: JSON.stringify({ url: 'not-a-url' }),
         headers: { 'Content-Type': 'application/json' },
+        token: validToken,
       });
       expect(res.status).toBe(400);
       expect(res.body.message).toContain('Format URL tidak valid');
@@ -227,8 +254,9 @@ describe('Document API', () => {
 
     it('should upload URL successfully', async () => {
       const res = await request('POST', '/urls', {
-        body: JSON.stringify({ url: 'https://example.com', secretCode: 'test_secret' }),
+        body: JSON.stringify({ url: 'https://example.com' }),
         headers: { 'Content-Type': 'application/json' },
+        token: validToken,
       });
       expect(res.status).toBe(201);
       expect(res.body.status).toBe('success');
@@ -241,19 +269,26 @@ describe('Document API', () => {
         documentId: res.body.data.id,
       });
     });
-
-    it('should reject when secretCode is missing for URL', async () => {
-      const res = await request('POST', '/urls', {
-        body: JSON.stringify({ url: 'https://example.com' }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      expect(res.status).toBe(400);
-    });
   });
 
+  // ─────────────────────────────────────────
+  // GET /documents
+  // ─────────────────────────────────────────
   describe('GET /documents', () => {
-    it('should return empty array when no documents', async () => {
+    it('should reject with 401 when no access token is provided', async () => {
       const res = await request('GET', '/documents');
+      expect(res.status).toBe(401);
+    });
+
+    it('should reject with 401 when access token is invalid', async () => {
+      const res = await request('GET', '/documents', {
+        token: 'invalid.token.here',
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('should return empty array when no documents', async () => {
+      const res = await request('GET', '/documents', { token: validToken });
       expect(res.status).toBe(200);
       expect(res.body.data).toEqual([]);
     });
@@ -266,26 +301,45 @@ describe('Document API', () => {
         "INSERT INTO documents (source, type, status) VALUES ('https://example.com', 'url', 'in progress')",
       );
 
-      const res = await request('GET', '/documents');
+      const res = await request('GET', '/documents', { token: validToken });
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(2);
     });
   });
 
+  // ─────────────────────────────────────────
+  // DELETE /documents
+  // ─────────────────────────────────────────
   describe('DELETE /documents', () => {
+    it('should reject with 401 when no access token is provided', async () => {
+      const res = await request('DELETE', '/documents', {
+        body: JSON.stringify({ source: 'uploads/test.pdf' }),
+        headers: { 'Content-Type': 'application/json' },
+      });
+      expect(res.status).toBe(401);
+    });
+
+    it('should reject with 401 when access token is invalid', async () => {
+      const res = await request('DELETE', '/documents', {
+        body: JSON.stringify({ source: 'uploads/test.pdf' }),
+        headers: { 'Content-Type': 'application/json' },
+        token: 'invalid.token.here',
+      });
+      expect(res.status).toBe(401);
+    });
+
     it('should delete document by source successfully', async () => {
-      // Insert into documents table
       await pool.query(
         "INSERT INTO documents (source, type, status) VALUES ('uploads/test.pdf', 'docs', 'completed')",
       );
-      // Insert into vector store
       await pool.query(
         `INSERT INTO langchain_pg_embedding (content, metadata) VALUES ('test content', '{"source": "uploads/test.pdf"}'::jsonb)`,
       );
 
       const res = await request('DELETE', '/documents', {
-        body: JSON.stringify({ source: 'uploads/test.pdf', secretCode: 'test_secret' }),
+        body: JSON.stringify({ source: 'uploads/test.pdf' }),
         headers: { 'Content-Type': 'application/json' },
+        token: validToken,
       });
       expect(res.status).toBe(200);
       expect(res.body.status).toBe('success');
@@ -295,34 +349,19 @@ describe('Document API', () => {
 
     it('should reject when source is missing', async () => {
       const res = await request('DELETE', '/documents', {
-        body: JSON.stringify({ secretCode: 'test_secret' }),
+        body: JSON.stringify({}),
         headers: { 'Content-Type': 'application/json' },
+        token: validToken,
       });
       expect(res.status).toBe(400);
       expect(res.body.message).toBe('Source harus dikirim');
     });
 
-    it('should reject when secretCode is invalid', async () => {
-      const res = await request('DELETE', '/documents', {
-        body: JSON.stringify({ source: 'uploads/test.pdf', secretCode: 'wrong' }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      expect(res.status).toBe(401);
-      expect(res.body.message).toBe('Kode rahasia tidak valid');
-    });
-
-    it('should reject when secretCode is missing', async () => {
-      const res = await request('DELETE', '/documents', {
-        body: JSON.stringify({ source: 'uploads/test.pdf' }),
-        headers: { 'Content-Type': 'application/json' },
-      });
-      expect(res.status).toBe(400);
-    });
-
     it('should return 404 when source not found', async () => {
       const res = await request('DELETE', '/documents', {
-        body: JSON.stringify({ source: 'nonexistent.pdf', secretCode: 'test_secret' }),
+        body: JSON.stringify({ source: 'nonexistent.pdf' }),
         headers: { 'Content-Type': 'application/json' },
+        token: validToken,
       });
       expect(res.status).toBe(404);
       expect(res.body.message).toContain('tidak ditemukan');
