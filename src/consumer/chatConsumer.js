@@ -3,6 +3,7 @@ import { HumanMessage, SystemMessage } from '@langchain/core/messages';
 import pool from '../producer/utils/database.js';
 import { getVectorStore } from './indexingConsumer.js';
 import { ChatGroq } from '@langchain/groq';
+import { traceable } from "langsmith/traceable";
 
 const llm = new ChatGroq({
   model: 'openai/gpt-oss-120b',
@@ -88,7 +89,7 @@ const queryReWriting = async (message) => {
   );
 };
 
-const processChat = async ({ message, phoneNumber }) => {
+const _processChat = async ({ message, phoneNumber }) => {
   try {
     const rewrittenQuery = await queryReWriting(message);
     const relevantDocs = await retrieveContext(rewrittenQuery.content);
@@ -108,5 +109,15 @@ const processChat = async ({ message, phoneNumber }) => {
     console.error('Gagal memproses chat:', error);
   }
 };
+
+const processChat = traceable(
+  _processChat,
+  {
+    name: "processChat",
+    run_type: "chain",
+    tags: ["chat"],
+    metadata: { project: "uajm-rag-chatbot" },
+  }
+);
 
 export { processChat, sendWhatsAppMessage };
