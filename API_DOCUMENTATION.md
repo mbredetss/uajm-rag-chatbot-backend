@@ -494,3 +494,76 @@ Status: `400 Bad Request`
 { "status": "fail", "message": "\"refreshToken\" is required" }
 ```
 Status: `400 Bad Request`
+
+---
+
+## 8. Register User
+
+Membuat akun pengguna baru. Endpoint ini digunakan untuk mendaftarkan admin baru ke sistem.
+
+### Endpoint
+
+```
+POST /users
+```
+
+### Headers
+
+| Header         | Nilai               | Keterangan |
+| -------------- | ------------------- | ---------- |
+| `Content-Type` | `application/json`  | Wajib      |
+
+### Request Body (JSON)
+
+| Field      | Tipe     | Wajib | Keterangan                     |
+| ---------- | -------- | ----- | ------------------------------ |
+| `username` | `string` | Ya    | Username unik untuk login      |
+| `password` | `string` | Ya    | Password pengguna              |
+| `fullname` | `string` | Ya    | Nama lengkap pengguna          |
+
+### Contoh Request
+
+```json
+{
+  "username": "admin_baru",
+  "password": "password123",
+  "fullname": "Admin Baru"
+}
+```
+
+### Response Sukses
+
+**Status Code:** `201 Created`
+
+```json
+{
+  "status": "success",
+  "message": null,
+  "data": {
+    "userId": "xK9mP2nQwRtYuVzA3bC"
+  }
+}
+```
+
+### Response Error
+
+**Username sudah digunakan:**
+
+```json
+{ "status": "fail", "message": "Gagal menambahkan user. Username sudah di gunakan!" }
+```
+Status: `400 Bad Request`
+
+**Validasi field gagal (salah satu field kosong):**
+
+```json
+{ "status": "fail", "message": "\"username\" is required" }
+```
+```json
+{ "status": "fail", "message": "\"password\" is required" }
+```
+```json
+{ "status": "fail", "message": "\"fullname\" is required" }
+```
+Status: `400 Bad Request`
+

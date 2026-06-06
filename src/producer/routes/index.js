@@ -4,6 +4,7 @@ import { addDocument, addUrl, getAllDocuments, deleteDocumentBySource } from '..
 import { successResponse } from '../utils/response.js';
 import webhooksRouter from '../services/webhooks/routes/index.js';
 import authentications from '../services/authentications/routes/index.js';
+import users from '../services/users/routes/index.js';
 
 const router = Router();
 
@@ -46,5 +47,6 @@ router.delete('/documents', async (req, res, next) => {
 });
 
 router.use('/authentications', authentications);
+router.use('/users', users);
 
 export default router;

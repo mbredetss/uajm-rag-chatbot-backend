@@ -1,6 +1,7 @@
 import multer from 'multer';
 import ClientError from '../exceptions/ClientError.js';
 import { errorResponse } from '../utils/response.js';
+import { response } from '../utils/index.js';
 
 const errorHandler = (err, req, res, next) => {
   if (err instanceof multer.MulterError) {
@@ -8,6 +9,10 @@ const errorHandler = (err, req, res, next) => {
       return errorResponse(res, 400, 'Ukuran dokumen melebihi batas maksimum 10MB');
     }
     return errorResponse(res, 400, err.message);
+  }
+
+  if (err.isJoi) {
+    return response(res, 400, err.details[0].message, null);
   }
 
   if (err instanceof ClientError) {
