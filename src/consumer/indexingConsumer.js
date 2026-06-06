@@ -9,6 +9,7 @@ import { HumanMessage } from '@langchain/core/messages';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import pool from '../producer/utils/database.js';
 import * as fs from "fs";
+import { z } from "zod";
 
 const model = new ChatGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_API_KEY,
@@ -148,13 +149,20 @@ const extractDesiredInformation = async (docs, desiredInformation) => {
     Here is the document: "${docs[0].pageContent}"
     `;
 
+  const modelWithStructure = model.withStructuredOutput(
+    z.object({
+      content: z.string().describe("The extracted information."), 
+      isInformationAvailable: z.boolean().describe("Is the desired information present in the document? False if not, true if present"), 
+    })
+  );
+
   const message = new HumanMessage({
     content: [
       { type: "text", text: prompt },
     ],
   });
 
-  const response = await model.invoke([message]);
+  const response = await modelWithStructure.invoke([message]);
 
   return [
     {
@@ -168,7 +176,10 @@ const processIndexing = async ({ desiredInformation, source, type, documentId })
   try {
     let docs = await loadDocument(source, type);
     if (desiredInformation) {
-      docs = await extractDesiredInformation(docs, desiredInformation);
+      const result = await extractDesiredInformation(docs, desiredInformation);
+      const {content, isInformationAvailable} = result;
+      if (!isInformationAvailable) throw new Error('Informasi yang diinginkan tidak ditemukan dalam dokumen.');
+      docs = content;
     }
     const cleanDocs = docsCleaning(docs);
     await vectorStore.addDocuments(cleanDocs);
