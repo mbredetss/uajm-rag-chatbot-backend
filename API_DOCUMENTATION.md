@@ -307,3 +307,190 @@ Status: `404 Not Found`
 | `in progress` | Dokumen sedang diproses (indexing)                  |
 | `completed`   | Dokumen berhasil diindeks dan siap digunakan        |
 | `failed`      | Proses indexing gagal                               |
+
+---
+
+## 5. Login (Authentications)
+
+Melakukan autentikasi pengguna menggunakan username dan password. Mengembalikan `accessToken` dan `refreshToken` jika kredensial valid.
+
+### Endpoint
+
+```
+POST /authentications
+```
+
+### Headers
+
+| Header         | Nilai               | Keterangan |
+| -------------- | ------------------- | ---------- |
+| `Content-Type` | `application/json`  | Wajib      |
+
+### Request Body (JSON)
+
+| Field      | Tipe     | Wajib | Keterangan              |
+| ---------- | -------- | ----- | ----------------------- |
+| `username` | `string` | Ya    | Username pengguna       |
+| `password` | `string` | Ya    | Password pengguna       |
+
+### Contoh Request
+
+```json
+{
+  "username": "admin",
+  "password": "yourpassword"
+}
+```
+
+### Response Sukses
+
+**Status Code:** `201 Created`
+
+```json
+{
+  "status": "success",
+  "message": null,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+### Response Error
+
+**Username atau password salah:**
+
+```json
+{ "status": "fail", "message": "Username atau password salah!" }
+```
+Status: `401 Unauthorized`
+
+**Validasi field gagal (username/password kosong):**
+
+```json
+{ "status": "fail", "message": "\"username\" is required" }
+```
+Status: `400 Bad Request`
+
+---
+
+## 6. Refresh Access Token
+
+Memperbarui `accessToken` yang sudah kedaluwarsa menggunakan `refreshToken` yang masih valid.
+
+### Endpoint
+
+```
+PUT /authentications
+```
+
+### Headers
+
+| Header         | Nilai               | Keterangan |
+| -------------- | ------------------- | ---------- |
+| `Content-Type` | `application/json`  | Wajib      |
+
+### Request Body (JSON)
+
+| Field          | Tipe     | Wajib | Keterangan                                  |
+| -------------- | -------- | ----- | ------------------------------------------- |
+| `refreshToken` | `string` | Ya    | Refresh token yang diperoleh saat login      |
+
+### Contoh Request
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Response Sukses
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "status": "success",
+  "message": null,
+  "data": {
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }
+}
+```
+
+### Response Error
+
+**Refresh token tidak valid atau tidak ditemukan:**
+
+```json
+{ "status": "fail", "message": "Refresh token tidak valid" }
+```
+Status: `400 Bad Request`
+
+**Validasi field gagal (refreshToken kosong):**
+
+```json
+{ "status": "fail", "message": "\"refreshToken\" is required" }
+```
+Status: `400 Bad Request`
+
+---
+
+## 7. Logout (Hapus Refresh Token)
+
+Menghapus `refreshToken` dari database untuk mengakhiri sesi pengguna (logout).
+
+### Endpoint
+
+```
+DELETE /authentications
+```
+
+### Headers
+
+| Header         | Nilai               | Keterangan |
+| -------------- | ------------------- | ---------- |
+| `Content-Type` | `application/json`  | Wajib      |
+
+### Request Body (JSON)
+
+| Field          | Tipe     | Wajib | Keterangan                                  |
+| -------------- | -------- | ----- | ------------------------------------------- |
+| `refreshToken` | `string` | Ya    | Refresh token yang ingin dihapus (logout)    |
+
+### Contoh Request
+
+```json
+{
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+### Response Sukses
+
+**Status Code:** `200 OK`
+
+```json
+{
+  "status": "success",
+  "message": "Refresh token berhasil dihapus!",
+  "data": null
+}
+```
+
+### Response Error
+
+**Refresh token tidak valid atau tidak ditemukan:**
+
+```json
+{ "status": "fail", "message": "Refresh token tidak valid" }
+```
+Status: `400 Bad Request`
+
+**Validasi field gagal (refreshToken kosong):**
+
+```json
+{ "status": "fail", "message": "\"refreshToken\" is required" }
+```
+Status: `400 Bad Request`

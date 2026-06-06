@@ -3,6 +3,7 @@ import { upload } from '../middlewares/uploadMiddleware.js';
 import { addDocument, addUrl, getAllDocuments, deleteDocumentBySource } from '../services/DocumentService.js';
 import { successResponse } from '../utils/response.js';
 import webhooksRouter from '../services/webhooks/routes/index.js';
+import authentications from '../services/authentications/routes/index.js';
 
 const router = Router();
 
@@ -43,5 +44,7 @@ router.delete('/documents', async (req, res, next) => {
     next(error);
   }
 });
+
+router.use('/authentications', authentications);
 
 export default router;
