@@ -1,8 +1,6 @@
 import request from 'supertest';
 import { describe, it, beforeAll, afterAll } from 'vitest';
 import app from '../index.js';
-import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper.js';
-import AuthenticationsTableTestHelper from '../../../../tests/AuthenticationsTableTestHelper.js';
 
 describe('HTTP Server', () => {
     describe('when GET /', () => {
@@ -45,8 +43,17 @@ describe('HTTP Server', () => {
     });
 
     describe('when POST /users', () => {
-        afterAll(async () => {
-            await UsersTableTestHelper.cleanTable();
+        let superAdminToken = null;
+
+        beforeAll(async () => {
+            // Login sebagai super admin untuk mendapatkan token
+            const loginRes = await request(app)
+                .post('/authentications')
+                .send({
+                    username: 'super_admin',
+                    password: 'sampurnasurya882@',
+                });
+            superAdminToken = loginRes.body.data?.accessToken;
         });
 
         const existUsername = `user_exist_${Date.now()}`;
@@ -61,6 +68,7 @@ describe('HTTP Server', () => {
 
                 const response = await request(app)
                     .post('/users')
+                    .set('Authorization', `Bearer ${superAdminToken}`)
                     .send(payload);
 
                 expect(response.status).toBe(201);
@@ -76,11 +84,14 @@ describe('HTTP Server', () => {
 
         describe('Skenario 2: Adding User with Exist Username', () => {
             beforeAll(async () => {
-                await request(app).post('/users').send({
-                    username: existUsername,
-                    password: 'password123',
-                    fullname: 'Existing User',
-                });
+                await request(app)
+                    .post('/users')
+                    .set('Authorization', `Bearer ${superAdminToken}`)
+                    .send({
+                        username: existUsername,
+                        password: 'password123',
+                        fullname: 'Existing User',
+                    });
             });
 
             it('should response 400 when username already exists', async () => {
@@ -92,6 +103,7 @@ describe('HTTP Server', () => {
 
                 const response = await request(app)
                     .post('/users')
+                    .set('Authorization', `Bearer ${superAdminToken}`)
                     .send(payload);
 
                 expect(response.status).toBe(400);
@@ -115,6 +127,7 @@ describe('HTTP Server', () => {
                 it(`should response 400 when ${desc}`, async () => {
                     const response = await request(app)
                         .post('/users')
+                        .set('Authorization', `Bearer ${superAdminToken}`)
                         .send(payload);
 
                     expect(response.status).toBe(400);
@@ -124,6 +137,64 @@ describe('HTTP Server', () => {
                     expect(response.body).toHaveProperty('message');
                     expect(response.body.message).not.toBe('');
                 });
+            });
+        });
+
+        describe('Skenario 4: Adding User Without Access Token', () => {
+            it('should response 401 when no token is provided', async () => {
+                const response = await request(app)
+                    .post('/users')
+                    .send({
+                        username: 'someuser',
+                        password: 'pass123',
+                        fullname: 'Some User',
+                    });
+
+                expect(response.status).toBe(401);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'fail');
+                expect(response.body).toHaveProperty('message');
+            });
+        });
+
+        describe('Skenario 5: Adding User with Non-Super Admin Token', () => {
+            let adminToken = null;
+
+            beforeAll(async () => {
+                // Buat user admin biasa terlebih dahulu
+                const adminUsername = `admin_test_${Date.now()}`;
+                await request(app)
+                    .post('/users')
+                    .set('Authorization', `Bearer ${superAdminToken}`)
+                    .send({
+                        username: adminUsername,
+                        password: 'password123',
+                        fullname: 'Admin Biasa',
+                    });
+
+                // Login sebagai admin biasa
+                const loginRes = await request(app)
+                    .post('/authentications')
+                    .send({ username: adminUsername, password: 'password123' });
+                adminToken = loginRes.body.data?.accessToken;
+            });
+
+            it('should response 403 when token role is not super admin', async () => {
+                const response = await request(app)
+                    .post('/users')
+                    .set('Authorization', `Bearer ${adminToken}`)
+                    .send({
+                        username: `blocked_user_${Date.now()}`,
+                        password: 'pass123',
+                        fullname: 'Blocked User',
+                    });
+
+                expect(response.status).toBe(403);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'fail');
+                expect(response.body).toHaveProperty('message');
             });
         });
     });
@@ -137,13 +208,19 @@ describe('HTTP Server', () => {
         let validRefreshToken = null;
 
         beforeAll(async () => {
-            // Buat user untuk keperluan test
-            await request(app).post('/users').send(testCredential);
-        });
+            // Buat user untuk keperluan test authentication — gunakan token super admin
+            const loginRes = await request(app)
+                .post('/authentications')
+                .send({
+                    username: 'super_admin',
+                    password: 'sampurnasurya882@',
+                });
+            const superAdminToken = loginRes.body.data?.accessToken;
 
-        afterAll(async () => {
-            await AuthenticationsTableTestHelper.cleanTable();
-            await UsersTableTestHelper.cleanTable();
+            await request(app)
+                .post('/users')
+                .set('Authorization', `Bearer ${superAdminToken}`)
+                .send(testCredential);
         });
 
         describe('Skenario 1: Post Authentication with Valid Credential', () => {
