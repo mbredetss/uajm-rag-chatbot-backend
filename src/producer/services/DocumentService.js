@@ -3,6 +3,7 @@ import pool from '../utils/database.js';
 import { publishToQueue } from '../utils/rabbitmq.js';
 import ValidationError from '../exceptions/ValidationError.js';
 import NotFoundError from '../exceptions/NotFoundError.js';
+import userRepositories from './users/repositories/user-repositories.js';
 
 const INDEXING_QUEUE = 'indexing_queue';
 
@@ -11,6 +12,7 @@ const urlSchema = Joi.object({
     'string.uri': 'Format URL tidak valid',
     'any.required': 'URL harus diisi',
   }),
+  desiredInformation: Joi.string(),
 });
 
 const documentSchema = Joi.object({
@@ -25,6 +27,11 @@ const addDocument = async (req) => {
     throw new ValidationError('Dokumen harus dikirim');
   }
 
+  const { error } = documentSchema.validate({ desiredInformation });
+  if (error) {
+    throw new ValidationError(error.details[0].message);
+  }
+
   const source = file.path;
   const type = 'docs';
 
@@ -35,9 +42,13 @@ const addDocument = async (req) => {
 
   const document = result.rows[0];
 
+  const { id } = req.user;
+  const username = await userRepositories.getUsername(id);
+
   await publishToQueue(INDEXING_QUEUE, {
-    desiredInformation, 
+    desiredInformation,
     source,
+    username,
     type,
     documentId: document.id,
   });
@@ -46,13 +57,13 @@ const addDocument = async (req) => {
 };
 
 const addUrl = async (req) => {
-  const { url } = req.body;
+  const { url, desiredInformation } = req.body;
 
   if (!url) {
     throw new ValidationError('URL harus dikirim');
   }
 
-  const { error } = urlSchema.validate({ url });
+  const { error } = urlSchema.validate({ url, desiredInformation });
   if (error) {
     throw new ValidationError(error.details[0].message);
   }
@@ -66,10 +77,14 @@ const addUrl = async (req) => {
   );
 
   const document = result.rows[0];
+  const { id } = req.user;
+  const username = await userRepositories.getUsername(id);
 
   await publishToQueue(INDEXING_QUEUE, {
+    desiredInformation,
     source,
     type,
+    username,
     documentId: document.id,
   });
 

@@ -105,6 +105,7 @@ POST /urls
 | Field | Tipe     | Wajib | Keterangan                                   |
 | ----- | -------- | ----- | -------------------------------------------- |
 | `url` | `string` | Ya    | URL website yang akan diindeks (format valid) |
+| `desiredInformation` | `string` | Tidak | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
 
 ### Contoh Request
 
