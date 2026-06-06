@@ -2,6 +2,7 @@ import request from 'supertest';
 import { describe, it, beforeAll, afterAll } from 'vitest';
 import app from '../index.js';
 import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper.js';
+import AuthenticationsTableTestHelper from '../../../../tests/AuthenticationsTableTestHelper.js';
 
 describe('HTTP Server', () => {
     describe('when GET /', () => {
@@ -123,6 +124,147 @@ describe('HTTP Server', () => {
                     expect(response.body).toHaveProperty('message');
                     expect(response.body.message).not.toBe('');
                 });
+            });
+        });
+    });
+
+    describe('when /authentications', () => {
+        const testCredential = {
+            username: `auth_test_${Date.now()}`,
+            password: 'password123',
+            fullname: 'Auth Test User',
+        };
+        let validRefreshToken = null;
+
+        beforeAll(async () => {
+            // Buat user untuk keperluan test
+            await request(app).post('/users').send(testCredential);
+        });
+
+        afterAll(async () => {
+            await AuthenticationsTableTestHelper.cleanTable();
+            await UsersTableTestHelper.cleanTable();
+        });
+
+        describe('Skenario 1: Post Authentication with Valid Credential', () => {
+            it('should response 201 with accessToken and refreshToken', async () => {
+                const response = await request(app)
+                    .post('/authentications')
+                    .send({
+                        username: testCredential.username,
+                        password: testCredential.password,
+                    });
+
+                expect(response.status).toBe(201);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'success');
+                expect(response.body).toHaveProperty('data');
+                expect(response.body.data).toHaveProperty('accessToken');
+                expect(response.body.data).toHaveProperty('refreshToken');
+                expect(response.body.data.accessToken).toBeTruthy();
+                expect(response.body.data.refreshToken).toBeTruthy();
+
+                // Simpan refreshToken untuk skenario berikutnya
+                validRefreshToken = response.body.data.refreshToken;
+            });
+        });
+
+        describe('Skenario 2: Post Authentication with Invalid Credential', () => {
+            it('should response 401 when password is wrong', async () => {
+                const response = await request(app)
+                    .post('/authentications')
+                    .send({
+                        username: testCredential.username,
+                        password: 'wrong_password',
+                    });
+
+                expect(response.status).toBe(401);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'fail');
+                expect(response.body).toHaveProperty('message');
+                expect(response.body.message).toBe('Username atau password salah!');
+            });
+
+            it('should response 401 when username does not exist', async () => {
+                const response = await request(app)
+                    .post('/authentications')
+                    .send({
+                        username: 'user_yang_tidak_ada',
+                        password: 'password123',
+                    });
+
+                expect(response.status).toBe(401);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'fail');
+                expect(response.body).toHaveProperty('message');
+                expect(response.body.message).toBe('Username atau password salah!');
+            });
+        });
+
+        describe('Skenario 4: Put Authentications with Valid Refresh Token', () => {
+            it('should response 200 with new accessToken', async () => {
+                // Pastikan validRefreshToken sudah terisi dari skenario 1
+                expect(validRefreshToken).toBeTruthy();
+
+                const response = await request(app)
+                    .put('/authentications')
+                    .send({ refreshToken: validRefreshToken });
+
+                expect(response.status).toBe(200);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'success');
+                expect(response.body).toHaveProperty('data');
+                expect(response.body.data).toHaveProperty('accessToken');
+                expect(response.body.data.accessToken).toBeTruthy();
+                expect(typeof response.body.data.accessToken).toBe('string');
+            });
+        });
+
+        describe('Skenario 5: Put Authentications with Invalid Refresh Token', () => {
+            it('should response 400 when refresh token is invalid', async () => {
+                const response = await request(app)
+                    .put('/authentications')
+                    .send({ refreshToken: 'invalid.refresh.token' });
+
+                expect(response.status).toBe(400);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'fail');
+                expect(response.body).toHaveProperty('message');
+            });
+        });
+
+        describe('Skenario 6: Delete Authentications with Valid Refresh Token', () => {
+            it('should response 200 when logout with valid refresh token', async () => {
+                expect(validRefreshToken).toBeTruthy();
+
+                const response = await request(app)
+                    .delete('/authentications')
+                    .send({ refreshToken: validRefreshToken });
+
+                expect(response.status).toBe(200);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'success');
+                expect(response.body).toHaveProperty('message', 'Refresh token berhasil dihapus!');
+            });
+        });
+
+        describe('Skenario 7: Delete Authentications with Invalid Refresh Token', () => {
+            it('should response 400 when logout with invalid refresh token', async () => {
+                const response = await request(app)
+                    .delete('/authentications')
+                    .send({ refreshToken: 'invalid.refresh.token' });
+
+                expect(response.status).toBe(400);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'fail');
+                expect(response.body).toHaveProperty('message');
             });
         });
     });
