@@ -133,7 +133,11 @@ const updateDocumentStatus = async (documentId, status, errorMessage) => {
 const docsCleaning = (docs) => {
   return docs.map(doc => ({
     ...doc,
-    pageContent: doc.pageContent.replace(/[\n\r\t]/g, ' '),
+    pageContent: doc.pageContent.replace(/[\n\r\t]/g, ' '), 
+    metadata: {
+      ...doc.metadata,
+      createdAt: new Date().toISOString(), 
+    }, 
   }));
 };
 
