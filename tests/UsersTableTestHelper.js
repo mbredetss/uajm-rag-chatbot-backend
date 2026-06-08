@@ -24,7 +24,7 @@ const UsersTableTestHelper = {
   },
 
   async cleanTable() {
-    await pool.query(`DELETE FROM users WHERE id != 'user-Z-NB4eui0KgcpMM0'`);
+    await pool.query(`DELETE FROM users WHERE role != 'super admin'`);
   },
 };
 
