@@ -6,6 +6,9 @@ exports.up = (pgm) => {
     source: { type: 'varchar(500)', notNull: true },
     type: { type: 'varchar(10)', notNull: true },
     status: { type: 'varchar(20)', notNull: true, default: 'in progress' },
+    content: {
+      type: 'text'
+    },
     created_at: {
       type: 'timestamp',
       notNull: true,

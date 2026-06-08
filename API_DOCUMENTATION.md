@@ -193,6 +193,7 @@ GET /documents
       "type": "docs",
       "error_message": null,
       "status": "completed",
+      "content": "ini adalah isi dari dokumen yang sudah berhasil di index",
       "created_at": "2026-05-17T06:00:00.000Z",
       "updated_at": "2026-05-17T06:01:00.000Z"
     },
@@ -203,6 +204,7 @@ GET /documents
       "type": "docs",
       "error_message": "error message",
       "status": "failed",
+      "content": null,
       "created_at": "2026-05-17T06:00:00.000Z",
       "updated_at": "2026-05-17T06:01:00.000Z"
     },
@@ -213,6 +215,7 @@ GET /documents
       "type": "url",
       "error_message": null,
       "status": "in progress",
+      "content": "ini adalah isi dari dokumen yang sudah berhasil di index",
       "created_at": "2026-05-17T06:05:00.000Z",
       "updated_at": "2026-05-17T06:05:00.000Z"
     }
