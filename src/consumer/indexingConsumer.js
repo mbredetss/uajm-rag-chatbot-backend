@@ -3,9 +3,8 @@ import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { TextLoader } from '@langchain/classic/document_loaders/fs/text';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
-import { HuggingFaceInferenceEmbeddings } from '@langchain/community/embeddings/hf';
-import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import { HumanMessage } from '@langchain/core/messages';
+import vectorStore from '../producer/utils/vectorStore.js';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import pool from '../producer/utils/database.js';
 import * as fs from "fs";
@@ -16,29 +15,6 @@ const model = new ChatGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_API_KEY,
   model: 'gemini-3-flash-preview',
 });
-
-const embeddings = new HuggingFaceInferenceEmbeddings({
-  apiKey: process.env.HUGGINGFACEHUB_API_KEY,
-  model: 'LazarusNLP/all-indo-e5-small-v4',
-  provider: "hf-inference",
-});
-
-const getVectorStore = async () => {
-  return await PGVectorStore.initialize(embeddings, {
-    pool,
-    tableName: 'langchain_pg_embedding',
-    collectionTableName: 'langchain_pg_collection',
-    collectionName: 'uajm_documents',
-    columns: {
-      idColumnName: 'id',
-      vectorColumnName: 'embedding',
-      contentColumnName: 'content',
-      metadataColumnName: 'metadata',
-    },
-  });
-};
-
-const vectorStore = await getVectorStore();
 
 const _loadDocument = async (source, type) => {
   if (type === 'url') {
@@ -133,11 +109,11 @@ const updateDocumentStatus = async (documentId, status, errorMessage, content) =
 const docsCleaning = (docs) => {
   return docs.map(doc => ({
     ...doc,
-    pageContent: doc.pageContent.replace(/[\n\r\t]/g, ' '), 
+    pageContent: doc.pageContent.replace(/[\n\r\t]/g, ' '),
     metadata: {
       ...doc.metadata,
-      createdAt: new Date().toISOString(), 
-    }, 
+      createdAt: new Date().toISOString(),
+    },
   }));
 };
 
@@ -217,4 +193,4 @@ const processIndexing = async ({ desiredInformation, source, type, documentId })
   }
 };
 
-export { processIndexing, getVectorStore };
+export default processIndexing;

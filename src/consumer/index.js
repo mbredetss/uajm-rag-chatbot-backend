@@ -1,7 +1,7 @@
 import 'dotenv/config';
 import { consumeFromQueue } from '../producer/utils/rabbitmq.js';
-import { processIndexing } from './indexingConsumer.js';
-import { processChat } from './chatConsumer.js';
+import processIndexing from './indexingConsumer.js';
+import processChat from './chatConsumer.js';
 
 const INDEXING_QUEUE = 'indexing_queue';
 const CHAT_QUEUE = 'chat_queue';

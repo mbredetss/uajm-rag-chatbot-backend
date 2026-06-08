@@ -16,7 +16,7 @@
     "dev": "nodemon src/producer/server.js",
     "start:consumer": "node src/consumer/index.js",
     "test:watch": "vitest run --watch",
-    "test:coverate": "vitest run --coverage",
+    "test:coverage": "vitest run --coverage",
     "test": "vitest",
     "migrate": "node-pg-migrate",
     "createDataset": "node ./evaluation/createDataset.js",

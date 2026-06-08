@@ -5,8 +5,10 @@ import { successResponse } from '../utils/response.js';
 import webhooksRouter from '../services/webhooks/routes/index.js';
 import authentications from '../services/authentications/routes/index.js';
 import users from '../services/users/routes/index.js';
+import generateAnswers from '../services/generate-answers/routes/index.js';
 import authenticateToken from '../middlewares/auth.js';
 import verifySuperAdmin from '../middlewares/verify-admin.js';
+import verifySecretCode from '../middlewares/verifySecretCode.js';
 
 const router = Router();
 
@@ -50,5 +52,6 @@ router.delete('/documents', authenticateToken, async (req, res, next) => {
 
 router.use('/authentications', authentications);
 router.use('/users', authenticateToken, verifySuperAdmin, users);
+router.use('/generate-answers', verifySecretCode, generateAnswers);
 
 export default router;

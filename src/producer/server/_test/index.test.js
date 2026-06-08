@@ -44,6 +44,42 @@ describe('HTTP Server', () => {
         });
     });
 
+    describe('when POST /generate-answers', () => {
+        it('should response 401 when secret code is invalid', async () => {
+            const apps = app;
+            const payload = {
+                message: 'apa itu uajm?',
+            };
+            const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', 'invalid-secret-code');
+
+            expect(response.status).toBe(401);
+            expect(response.body.status).toEqual('fail');
+            expect(response.body.message).toEqual('Kode rahasia tidak valid');
+        });
+
+        it('should response 400 when user not sending message payload', async () => {
+            const apps = app;
+            const payload = {};
+            const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
+
+            expect(response.status).toBe(400);
+            expect(response.body.status).toEqual('fail');
+        });
+
+        it('should response 200', async () => {
+            const apps = app;
+            const payload = {
+                message: 'apa itu uajm?',
+            };
+            const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
+
+            expect(response.status).toBe(200);
+            expect(response.body.status).toEqual('success');
+            expect(response.body.data.answer).toBeDefined();
+            expect(response.body.data.relevantDocs).toBeDefined();
+        });
+    });
+
     describe('when POST /users', () => {
         let superAdminToken = null;
 
