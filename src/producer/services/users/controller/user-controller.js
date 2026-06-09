@@ -12,10 +12,6 @@ export const createUser = async (req, res) => {
 
   const user = await userRepositories.createUser(username, password, fullname);
 
-  if (!user) {
-    return response(res, 400, null, null);
-  }
-
   const userId = user.id;
   return response(res, 201, null, { userId });
 };

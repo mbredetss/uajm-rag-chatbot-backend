@@ -18,7 +18,6 @@ const errorHandler = (err, req, res, next) => {
     return response(res, err.statusCode, err.message);
   }
 
-  console.error(err);
   return response(res, 500, 'Terjadi kesalahan pada server');
 };
 

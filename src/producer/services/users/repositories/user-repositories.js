@@ -25,14 +25,6 @@ class UserRepositories {
     return result.rowCount;
   }
 
-  async verifyUserCredential(username) {
-    const result = await pool.query(
-      'SELECT id, password FROM users WHERE username = $1', [username]
-    );
-
-    return result.rows[0];
-  }
-
   async getFullNameById(id) {
     const result = await pool.query(
       `SELECT "fullName" FROM users

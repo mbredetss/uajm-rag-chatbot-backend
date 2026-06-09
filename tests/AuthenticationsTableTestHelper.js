@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import pool from "../src/producer/utils/database.js";
 
 const AuthenticationsTableTestHelper = {

@@ -7,6 +7,37 @@ import app from '../index.js';
 import UsersTableTestHelper from '../../../../tests/UsersTableTestHelper.js';
 import AuthenticationsTableTestHelper from '../../../../tests/AuthenticationsTableTestHelper.js';
 import DocumentsTableTestHelper from '../../../../tests/DocumentsTableTestHelper.js';
+import { uploadDir } from '../../middlewares/uploadMiddleware.js';
+
+vi.mock('../../utils/rabbitmq.js', () => ({
+    publishToQueue: vi.fn().mockResolvedValue(undefined),
+}));
+
+vi.mock('../../services/generate-answers/llm/index.js', () => ({
+    default: {
+        invoke: vi.fn().mockResolvedValue({
+            content: 'Ini adalah jawaban mock dari LLM',
+        }),
+    },
+}));
+
+vi.mock('../../utils/vectorStore.js', () => ({
+    default: {
+        similaritySearch: vi.fn().mockResolvedValue([
+            {
+                pageContent: 'Konten dokumen mock',
+                metadata: { createdAt: '2024-01-01' },
+            },
+        ]),
+    },
+}));
+
+vi.mock('../../services/generate-answers/query-rewrite/queryReWriting.js', () => ({
+    default: vi.fn().mockResolvedValue({
+        content: 'apa itu uajm?',
+    }),
+}));
+
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -45,47 +76,86 @@ describe('HTTP Server', () => {
     describe('when POST /', () => {
         it('should response 200', async () => {
             const apps = app;
-            const response = await request(apps).post('/').send({});
+            const payload = {
+                "object": "whatsapp_business_account",
+                "entry": [
+                    {
+                        "id": "215589313241560883",
+                        "changes": [
+                            {
+                                "value": {
+                                    "messaging_product": "whatsapp",
+                                    "metadata": {
+                                        "display_phone_number": "15551797781",
+                                        "phone_number_id": "7794189252778687"
+                                    },
+                                    "contacts": [
+                                        {
+                                            "profile": {
+                                                "name": "Jessica Laverdetman"
+                                            },
+                                            "wa_id": "13557825698"
+                                        }
+                                    ],
+                                    "messages": [
+                                        {
+                                            "from": "17863559966",
+                                            "id": "wamid.HBgLMTc4NjM1NTk5NjYVAGHAYWYET688aASGNTI1QzZFQjhEMDk2QQA=",
+                                            "timestamp": "1758254144",
+                                            "text": {
+                                                "body": "Hi!"
+                                            },
+                                            "type": "text"
+                                        }
+                                    ]
+                                },
+                                "field": "messages"
+                            }
+                        ]
+                    }
+                ]
+            };
+            const response = await request(apps).post('/').send(payload);
 
             expect(response.status).toBe(200);
         });
     });
 
-    // describe('when POST /generate-answers', () => {
-    //     it('should response 401 when secret code is invalid', async () => {
-    //         const apps = app;
-    //         const payload = {
-    //             message: 'apa itu uajm?',
-    //         };
-    //         const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', 'invalid-secret-code');
+    describe('when POST /generate-answers', () => {
+        it('should response 401 when secret code is invalid', async () => {
+            const apps = app;
+            const payload = {
+                message: 'apa itu uajm?',
+            };
+            const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', 'invalid-secret-code');
 
-    //         expect(response.status).toBe(401);
-    //         expect(response.body.status).toEqual('fail');
-    //         expect(response.body.message).toEqual('Kode rahasia tidak valid');
-    //     });
+            expect(response.status).toBe(401);
+            expect(response.body.status).toEqual('fail');
+            expect(response.body.message).toEqual('Kode rahasia tidak valid');
+        });
 
-    //     it('should response 400 when user not sending message payload', async () => {
-    //         const apps = app;
-    //         const payload = {};
-    //         const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
+        it('should response 400 when user not sending message payload', async () => {
+            const apps = app;
+            const payload = {};
+            const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
 
-    //         expect(response.status).toBe(400);
-    //         expect(response.body.status).toEqual('fail');
-    //     });
+            expect(response.status).toBe(400);
+            expect(response.body.status).toEqual('fail');
+        });
 
-    //     it('should response 200', async () => {
-    //         const apps = app;
-    //         const payload = {
-    //             message: 'apa itu uajm?',
-    //         };
-    //         const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
+        it('should response 200', async () => {
+            const apps = app;
+            const payload = {
+                message: 'apa itu uajm?',
+            };
+            const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
 
-    //         expect(response.status).toBe(200);
-    //         expect(response.body.status).toEqual('success');
-    //         expect(response.body.data.answer).toBeDefined();
-    //         expect(response.body.data.relevantDocs).toBeDefined();
-    //     });
-    // });
+            expect(response.status).toBe(200);
+            expect(response.body.status).toEqual('success');
+            expect(response.body.data.answer).toBeDefined();
+            expect(response.body.data.relevantDocs).toBeDefined();
+        });
+    });
 
     describe('when POST /users', () => {
         let superAdminToken = null;
@@ -159,6 +229,25 @@ describe('HTTP Server', () => {
                 expect(response.body).toHaveProperty('status', 'fail');
                 expect(response.body).toHaveProperty('message');
                 expect(response.body.message).toBe('Gagal menambahkan user. Username sudah di gunakan!');
+            });
+
+            it('should response 401 when sending invalid token', async () => {
+                const payload = {
+                    username: existUsername,
+                    password: 'anotherpassword',
+                    fullname: 'Another User',
+                };
+
+                const response = await request(app)
+                    .post('/users')
+                    .set('Authorization', `Bearer invalid.token.123`)
+                    .send(payload);
+
+                expect(response.status).toBe(401);
+                expect(response.headers['content-type']).toMatch(/application\/json/);
+                expect(response.body).toBeTypeOf('object');
+                expect(response.body).toHaveProperty('status', 'fail');
+                expect(response.body).toHaveProperty('message');
             });
         });
 
@@ -381,8 +470,14 @@ describe('HTTP Server', () => {
     describe('when POST /documents', () => {
         let accessToken = null;
         const testFilePath = path.join(__dirname, 'test-document.pdf');
+        const largeFilePath = path.join(__dirname, 'large-test-document.pdf');
+        const txtFilePath = path.join(__dirname, 'test-document.txt');
 
         beforeAll(async () => {
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
             const loginRes = await request(app)
                 .post('/authentications')
                 .send({
@@ -395,9 +490,11 @@ describe('HTTP Server', () => {
         });
 
         afterAll(async () => {
-            if (fs.existsSync(testFilePath)) {
-                fs.unlinkSync(testFilePath);
-            }
+            fs.rmSync(testFilePath, { force: true });
+            fs.rmSync(largeFilePath, { force: true });
+            fs.rmSync(txtFilePath, { force: true });
+            fs.rmSync(uploadDir, { force: true, recursive: true });
+
             await DocumentsTableTestHelper.cleanTable();
             await AuthenticationsTableTestHelper.cleanTable();
         });
@@ -424,6 +521,46 @@ describe('HTTP Server', () => {
             expect(response.body).toBeTypeOf('object');
             expect(response.body).toHaveProperty('status', 'fail');
             expect(response.body).toHaveProperty('message', 'Dokumen harus dikirim');
+        });
+
+        it('should response 400 when document file size is more than 10MB', async () => {
+            const largeContent = 'x'.repeat(10 * 1024 * 1024 + 1);
+            fs.writeFileSync(largeFilePath, largeContent);
+
+            const response = await request(app)
+                .post('/documents')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .attach('document', largeFilePath);
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', 'Ukuran dokumen melebihi batas maksimum 10MB');
+        });
+
+        it('should response 400 when document format is not allowed', async () => {
+            fs.writeFileSync(txtFilePath, 'dummy text content for testing');
+
+            const response = await request(app)
+                .post('/documents')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .attach('document', txtFilePath);
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', 'Format dokumen tidak diizinkan. Format yang diizinkan: .pdf, .csv, .docx, .doc, .jpg, .jpeg, .png, .webp');
+        });
+
+        it('should response 400 when file field name is wrong', async () => {
+            const response = await request(app)
+                .post('/documents')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .attach('wrongFieldName', testFilePath);
+
+            expect(response.status).toBe(400);
         });
 
         it('should response 201 when document is uploaded successfully', async () => {

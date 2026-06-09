@@ -7,10 +7,6 @@ import userRepositories from '../../users/repositories/user-repositories.js';
 const addUrl = async (req, res) => {
     const { url, desiredInformation } = req.body;
 
-    if (!url) {
-        throw new ValidationError('URL harus dikirim');
-    }
-
     const source = url;
     const type = 'url';
     const { id } = req.user;

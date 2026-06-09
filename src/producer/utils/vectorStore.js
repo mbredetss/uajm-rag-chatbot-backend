@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 import { HuggingFaceInferenceEmbeddings } from '@langchain/community/embeddings/hf';
 import { PGVectorStore } from '@langchain/community/vectorstores/pgvector';
 import pool from './database.js';

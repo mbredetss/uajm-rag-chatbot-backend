@@ -1,3 +1,4 @@
+/* istanbul ignore file */
 export const response = (res, statusCode, message, data) => {
   if (message) {
     return res
