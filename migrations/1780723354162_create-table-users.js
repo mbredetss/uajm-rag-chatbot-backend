@@ -1,3 +1,5 @@
+import bcrypt from 'bcrypt';
+
 /**
  * @type {import('node-pg-migrate').ColumnDefinitions | undefined}
  */
@@ -7,7 +9,7 @@
  * @param run {() => void | undefined}
  * @returns {Promise<void> | void}
  */
-export const up = (pgm) => {
+export const up = async (pgm) => {
   pgm.createType('user_role', ['super admin', 'admin']);
 
   pgm.createTable('users', {
@@ -44,6 +46,15 @@ export const up = (pgm) => {
       default: pgm.func('CURRENT_TIMESTAMP')
     }
   });
+
+  const username = process.env.USERNAME_SUPER_ADMIN;
+  const password = process.env.PASSWORD_SUPER_ADMIN;
+  const hashedPassword = await bcrypt.hash(password, 10);
+
+  pgm.sql(`
+    INSERT INTO users (id, username, password, "fullName", role)
+    VALUES ('user-123', '${username}', '${hashedPassword}', 'atma jaya super admin', 'super admin')
+  `);
 };
 
 /**
