@@ -1,12 +1,4 @@
 import axios from 'axios';
-import pool from '../producer/utils/database.js';
-
-const saveConversation = async (question, answer, relevantContext) => {
-  await pool.query(
-    'INSERT INTO conversations (question, answer, relevant_context) VALUES ($1, $2, $3)',
-    [question, answer, JSON.stringify(relevantContext)],
-  );
-};
 
 const sendWhatsAppMessage = async (phoneNumber, message) => {
   await axios.post(
@@ -29,15 +21,14 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
 const processChat = async ({ message, phoneNumber }) => {
   const result = await axios.post(`http://localhost:${process.env.PORT}/generate-answers`, {
     message,
+    userId: phoneNumber, 
   }, {
     headers: {
       'secret-code': process.env.SECRET_CODE,
     },
   });
 
-  const { answer, relevantDocs } = result.data.data;
-
-  await saveConversation(message, answer, relevantDocs);
+  const { answer } = result.data.data;
 
   await sendWhatsAppMessage(phoneNumber, answer);
 

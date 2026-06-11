@@ -125,7 +125,8 @@ describe('HTTP Server', () => {
         it('should response 401 when secret code is invalid', async () => {
             const apps = app;
             const payload = {
-                message: 'apa itu uajm?',
+                message: 'apa itu uajm?', 
+                userId: 'user-123'
             };
             const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', 'invalid-secret-code');
 
@@ -136,7 +137,20 @@ describe('HTTP Server', () => {
 
         it('should response 400 when user not sending message payload', async () => {
             const apps = app;
-            const payload = {};
+            const payload = {
+                userId: 'user-123'
+            };
+            const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
+
+            expect(response.status).toBe(400);
+            expect(response.body.status).toEqual('fail');
+        });
+
+        it('should response 400 when user not sending userId payload', async () => {
+            const apps = app;
+            const payload = {
+                question: "apa itu atma jaya?"
+            };
             const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
 
             expect(response.status).toBe(400);
@@ -146,14 +160,14 @@ describe('HTTP Server', () => {
         it('should response 200', async () => {
             const apps = app;
             const payload = {
-                message: 'apa itu uajm?',
+                message: 'apa itu uajm?', 
+                userId: 'users-123'
             };
             const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
 
             expect(response.status).toBe(200);
             expect(response.body.status).toEqual('success');
             expect(response.body.data.answer).toBeDefined();
-            expect(response.body.data.relevantDocs).toBeDefined();
         });
     });
 

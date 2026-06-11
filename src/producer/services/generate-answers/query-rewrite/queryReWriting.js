@@ -1,9 +1,10 @@
 /* istanbul ignore file */
+import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import llm from "../llm/index.js";
 
-const queryReWriting = async (question) => {
-  return await llm.invoke(
-    ` You are a language expert, specifically Indonesian. You are tasked with clarifying user questions and translating them into Indonesian (if the question is not in Indonesian).
+const queryReWriting = async (question, historyChat) => {
+  const systemPrompt = `
+   You are a language expert, specifically Indonesian. You are tasked with clarifying user questions and translating them into Indonesian (if the question is not in Indonesian).
     Here is a list of abbreviations:
     - UAJM -> Universitas Atma Jaya Makassar
     - BAPSI -> Biro Administrasi Perencanaan dan Pengembangan Sistem Informasi
@@ -22,8 +23,12 @@ const queryReWriting = async (question) => {
     - DO NOT DO OTHER THAN WHAT YOU ARE ASSIGNED TO DO.
     - just give the question that you have clarified.
     - filter the greetings from the user's question.
-    Here is the user's question: "${question}"`
-  );
+  `
+  return await llm.invoke([
+    new SystemMessage(systemPrompt), 
+    ...(historyChat ?? []), 
+    new HumanMessage(`here is the question: ${question}`),
+  ]);
 };
 
 export default queryReWriting;

@@ -5,7 +5,7 @@ exports.up = (pgm) => {
     id: 'id',
     question: { type: 'text', notNull: true },
     answer: { type: 'text', notNull: true },
-    relevant_context: { type: 'text', notNull: true },
+    user_id: {type: 'text', notNull: true }, 
     created_at: {
       type: 'timestamp',
       notNull: true,
