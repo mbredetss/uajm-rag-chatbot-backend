@@ -7,7 +7,12 @@ import { traceable } from "langsmith/traceable";
 import generateAnswerRepositories from "../repositories/generate-answer-repositories.js";
 
 const _runLLMChain = async (question, relevantDocs, historyChat) => {
-    const sortedDocs = [...relevantDocs].sort((a, b) => {
+    const THRESHOLD = 0.6;
+    const filteredDocs = relevantDocs.filter(
+        ([_doc, score]) => score <= THRESHOLD
+    );
+
+    const sortedDocs = [...filteredDocs].sort((a, b) => {
         const dateA = new Date(a.metadata.createdAt);
         const dateB = new Date(b.metadata.createdAt);
         return dateB - dateA;
@@ -57,7 +62,7 @@ const generateAnswer = async (req, res) => {
     ]);
 
     const rewrittenQuery = await queryReWriting(message, historyChat);
-    const relevantDocs = await vectorStore.similaritySearch(rewrittenQuery.content, 5);
+    const relevantDocs = await vectorStore.similaritySearchWithScore(rewrittenQuery.content, 5);
 
     const result = await runLLMChain(message, relevantDocs, historyChat);
 
