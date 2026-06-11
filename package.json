@@ -20,7 +20,7 @@
     "test": "vitest",
     "migrate": "node-pg-migrate",
     "createDataset": "node ./evaluation/createDataset.js",
-    "evaluate": "node ./evaluation/evaluation.js", 
+    "evaluate": "node ./evaluation/evaluation.js",
     "migrate:test": "node-pg-migrate --envPath .test.env"
   },
   "dependencies": {

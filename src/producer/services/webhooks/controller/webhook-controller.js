@@ -19,14 +19,16 @@ const handleIncomingMessage = async (req, res) => {
   const changes = entry?.changes?.[0];
   const message = changes?.value?.messages?.[0];
 
-  const from = message.from;
-  const text = message.text?.body;
+  if (message && message.type === 'text') {
+    const from = message.from;
+    const text = message.text?.body;
 
-  if (text && text.length >= 2) {
-    await publishToQueue(CHAT_QUEUE, {
-      message: text,
-      phoneNumber: from,
-    });
+    if (text && text.length >= 2) {
+      await publishToQueue(CHAT_QUEUE, {
+        message: text,
+        phoneNumber: from,
+      });
+    }
   }
 
   return res.sendStatus(200);
