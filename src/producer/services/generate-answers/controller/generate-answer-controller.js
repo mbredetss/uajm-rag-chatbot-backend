@@ -8,9 +8,11 @@ import generateAnswerRepositories from "../repositories/generate-answer-reposito
 
 const _runLLMChain = async (question, relevantDocs, historyChat) => {
     const THRESHOLD = 0.6;
-    const filteredDocs = relevantDocs.filter(
+    const filteredDocsWithScore = relevantDocs.filter(
         ([_doc, score]) => score <= THRESHOLD
     );
+
+    const filteredDocs = filteredDocsWithScore.map(([doc, _score]) => doc);
 
     const sortedDocs = [...filteredDocs].sort((a, b) => {
         const dateA = new Date(a.metadata.createdAt);

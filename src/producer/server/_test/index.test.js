@@ -23,11 +23,14 @@ vi.mock('../../services/generate-answers/llm/index.js', () => ({
 
 vi.mock('../../utils/vectorStore.js', () => ({
     default: {
-        similaritySearch: vi.fn().mockResolvedValue([
-            {
-                pageContent: 'Konten dokumen mock',
-                metadata: { createdAt: '2024-01-01' },
-            },
+        similaritySearchWithScore: vi.fn().mockResolvedValue([
+            [
+                {
+                    pageContent: 'Konten dokumen mock',
+                    metadata: { createdAt: '2024-01-01' },
+                },
+                0.3,
+            ],
         ]),
     },
 }));
