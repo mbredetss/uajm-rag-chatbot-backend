@@ -14,7 +14,7 @@ app.use(cors(corsOptions));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-
+app.use('/file', express.static('uploads'));
 app.use(routes);
 
 app.use(errorHandler);

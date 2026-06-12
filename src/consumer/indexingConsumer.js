@@ -4,6 +4,7 @@ import { TextLoader } from '@langchain/classic/document_loaders/fs/text';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
 import { HumanMessage } from '@langchain/core/messages';
+import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import vectorStore from '../producer/utils/vectorStore.js';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import pool from '../producer/utils/database.js';
@@ -155,11 +156,13 @@ const _extractDesiredInformation = async (docs, desiredInformation) => {
 
   const response = await modelWithStructure.invoke([message]);
 
+  const { isInformationAvailable, content } = response;
+  if (!isInformationAvailable) throw new Error('Informasi yang diinginkan tidak ditemukan dalam dokumen.');
+
   return [
     {
       ...docs[0],
-      pageContent: response.content,
-      isInformationAvailable: response.isInformationAvailable,
+      pageContent: content,
     }
   ];
 };
@@ -177,15 +180,20 @@ const extractDesiredInformation = traceable(
 const processIndexing = async ({ desiredInformation, source, type, documentId }) => {
   try {
     let docs = await loadDocument(source, type);
-    if (desiredInformation) {
-      const result = await extractDesiredInformation(docs, desiredInformation);
-      const { isInformationAvailable } = result[0];
-      if (!isInformationAvailable) throw new Error('Informasi yang diinginkan tidak ditemukan dalam dokumen.');
-      docs = result;
-    }
     const cleanDocs = docsCleaning(docs);
-    await vectorStore.addDocuments(cleanDocs);
-    await updateDocumentStatus(documentId, 'completed', null, cleanDocs[0].pageContent);
+
+    if (desiredInformation) {
+      docs = await extractDesiredInformation(cleanDocs, desiredInformation);
+      await vectorStore.addDocuments(docs);
+    } else {
+      const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 300, chunkOverlap: 60 });
+      docs = await splitter.splitDocuments(cleanDocs);
+      await vectorStore.addDocuments(docs);
+    }
+
+    const documents = docs.map(doc => doc.pageContent).join('\n\n');
+    await updateDocumentStatus(documentId, 'completed', null, documents);
+
     console.log(`Indexing selesai untuk dokumen ${documentId}`);
   } catch (error) {
     console.error(`Indexing gagal untuk dokumen ${documentId}:`, error);
