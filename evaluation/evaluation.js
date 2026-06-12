@@ -3,22 +3,28 @@ import { traceable } from "langsmith/traceable";
 import contextRelevance from "./metrik/contextRelevance.js";
 import groundedness from "./metrik/Groundedness.js";
 import answerRelevance from "./metrik/answerRelevance.js";
-import { getVectorStore } from "../src/consumer/indexingConsumer.js";
+import vectorStore from "../src/producer/utils/vectorStore.js";
 import 'dotenv/config';
 import { HumanMessage, SystemMessage } from "@langchain/core/messages";
 import { ChatGroq } from "@langchain/groq"
+
+const THRESHOLD = 0.6;
 
 const llm = new ChatGroq({
     model: 'openai/gpt-oss-120b',
     maxRetries: 15, 
 });
 
-const vectorStore = await getVectorStore();
-
 const ragBot = traceable(async (question) => {
-    const retrievedDocs = await vectorStore.similaritySearch(question, 5);
+    const retrievedDocsWithScore = await vectorStore.similaritySearchWithScore(question, 5);
 
-    const sortedDocs = [...retrievedDocs].sort((a, b) => {
+    const filteredDocsWithScore = retrievedDocsWithScore.filter(
+        ([_doc, score]) => score <= THRESHOLD
+    );
+
+    const filteredDocs = filteredDocsWithScore.map(([doc, _score]) => doc);
+
+    const sortedDocs = [...filteredDocs].sort((a, b) => {
         const dateA = new Date(a.metadata.createdAt);
         const dateB = new Date(b.metadata.createdAt);
         return dateB - dateA;
@@ -45,7 +51,7 @@ ${docsContent}`;
         new HumanMessage(question),
     ]);
 
-    return { "answer": aiMsg.content, "documents": retrievedDocs }
+    return { "answer": aiMsg.content, "documents": filteredDocs }
 });
 
 const targetFunc = (inputs) => {
@@ -55,7 +61,7 @@ const targetFunc = (inputs) => {
 const experimentResults = await evaluate(targetFunc, {
     data: "Dataset UAJM Chatbot",
     evaluators: [contextRelevance, groundedness, answerRelevance],
-    experimentPrefix: "rag-doc-relevance",
+    experimentPrefix: "UAJM Chatbot Evaluation",    
     metadata: { version: "LCEL context, openai/gpt-oss-120b" },
 });
 
