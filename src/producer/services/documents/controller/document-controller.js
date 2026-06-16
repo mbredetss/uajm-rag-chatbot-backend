@@ -6,7 +6,7 @@ import documentRepositories from '../repositories/document-repositories.js';
 
 const addDocument = async (req, res) => {
   const file = req.file;
-  const { desiredInformation } = req.body;
+  const { desiredInformation, isChunked } = req.body;
 
   if (!file) {
     throw new ValidationError('Dokumen harus dikirim');
@@ -24,6 +24,7 @@ const addDocument = async (req, res) => {
     source,
     type,
     documentId: document.id,
+    isChunked,
   });
 
   return response(res, 201, null, document);

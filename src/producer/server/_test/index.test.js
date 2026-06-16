@@ -128,7 +128,7 @@ describe('HTTP Server', () => {
         it('should response 401 when secret code is invalid', async () => {
             const apps = app;
             const payload = {
-                message: 'apa itu uajm?', 
+                message: 'apa itu uajm?',
                 userId: 'user-123'
             };
             const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', 'invalid-secret-code');
@@ -163,7 +163,7 @@ describe('HTTP Server', () => {
         it('should response 200', async () => {
             const apps = app;
             const payload = {
-                message: 'apa itu uajm?', 
+                message: 'apa itu uajm?',
                 userId: 'users-123'
             };
             const response = await request(apps).post('/generate-answers').send(payload).set('secret-code', process.env.SECRET_CODE);
@@ -527,11 +527,40 @@ describe('HTTP Server', () => {
             expect(response.body).toHaveProperty('status', 'fail');
         });
 
+        it('should reponse 400 when isChunked payload is not provided', async () => {
+            const response = await request(app)
+                .post('/documents')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .attach('document', testFilePath);
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', '"isChunked" is required');
+        });
+
+        it('should reponse 400 when isChunked payload is not boolean', async () => {
+            const response = await request(app)
+                .post('/documents')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .field('isChunked', 'not a boolean')
+                .attach('document', testFilePath);
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', '"isChunked" must be a boolean');
+        });
+
         it('should response 400 when no document file is attached', async () => {
             const response = await request(app)
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .send({});
+                .send({
+                    isChunked: false,
+                });
 
             expect(response.status).toBe(400);
             expect(response.headers['content-type']).toMatch(/application\/json/);
@@ -584,6 +613,7 @@ describe('HTTP Server', () => {
             const response = await request(app)
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
+                .field('isChunked', false)
                 .attach('document', testFilePath);
 
             expect(response.status).toBe(201);
@@ -601,7 +631,10 @@ describe('HTTP Server', () => {
             const response = await request(app)
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .field('desiredInformation', 'Informasi tentang UAJM')
+                .field({
+                    desiredInformation: 'Informasi tentang UAJM',
+                    isChunked: false
+                })
                 .attach('document', testFilePath);
 
             expect(response.status).toBe(201);
@@ -642,6 +675,35 @@ describe('HTTP Server', () => {
             expect(response.body).toHaveProperty('status', 'fail');
         });
 
+        it('should reponse 400 when isChunked payload is not provided', async () => {
+            const response = await request(app)
+                .post('/urls')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .send({ url: 'https://example.com' });
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', '"isChunked" is required');
+        });
+
+        it('should reponse 400 when isChunked payload is not boolean', async () => {
+            const response = await request(app)
+                .post('/urls')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .send({
+                    isChunked: 'not a boolean',
+                    url: 'https://example.com'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', '"isChunked" must be a boolean');
+        });
+
         it('should response 400 when url is not provided', async () => {
             const response = await request(app)
                 .post('/urls')
@@ -652,28 +714,34 @@ describe('HTTP Server', () => {
             expect(response.headers['content-type']).toMatch(/application\/json/);
             expect(response.body).toBeTypeOf('object');
             expect(response.body).toHaveProperty('status', 'fail');
-            expect(response.body).toHaveProperty('message', 'URL harus dikirim');
+            expect(response.body).toHaveProperty('message', '"isChunked" is required');
         });
 
         it('should response 400 when url format is invalid', async () => {
             const response = await request(app)
                 .post('/urls')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .send({ url: 'bukan-url-valid' });
+                .send({
+                    isChunked: false,
+                    url: 'bukan-url-valid'
+                });
 
             expect(response.status).toBe(400);
             expect(response.headers['content-type']).toMatch(/application\/json/);
             expect(response.body).toBeTypeOf('object');
             expect(response.body).toHaveProperty('status', 'fail');
             expect(response.body).toHaveProperty('message');
-            expect(response.body.message).toMatch(/Format URL tidak valid/);
+            expect(response.body.message).toMatch('\"url\" must be a valid uri');
         });
 
         it('should response 201 when url is valid', async () => {
             const response = await request(app)
                 .post('/urls')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .send({ url: 'https://example.com' });
+                .send({
+                    isChunked: false,
+                    url: 'https://example.com'
+                });
 
             expect(response.status).toBe(201);
             expect(response.headers['content-type']).toMatch(/application\/json/);
@@ -692,7 +760,8 @@ describe('HTTP Server', () => {
                 .set('Authorization', `Bearer ${accessToken}`)
                 .send({
                     url: 'https://uajm.ac.id',
-                    desiredInformation: 'Informasi tentang kampus UAJM',
+                    desiredInformation: 'Informasi tentang kampus UAJM', 
+                    isChunked: false,
                 });
 
             expect(response.status).toBe(201);
@@ -738,7 +807,10 @@ describe('HTTP Server', () => {
             await request(app)
                 .post('/urls')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .send({ url: 'https://test-get-docs.com' });
+                .send({
+                    url: 'https://test-get-docs.com',
+                    isChunked: false,
+                });
 
             const response = await request(app)
                 .get('/documents')

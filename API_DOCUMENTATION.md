@@ -31,6 +31,7 @@ POST /documents
 | -------------------- | -------- | ----- | ----------------------------------------------------------------------- |
 | `document`           | `file`   | Ya    | File dokumen. Format: `.pdf`, `.csv`, `.docx`. Maks: 10MB               |
 | `desiredInformation` | `string` | Tidak | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
+| `isChunked`          | `boolean`| Ya    | Apakah dokumen akan dipecah menjadi beberapa bagian. Format: boolean     |
 
 ### Response Sukses
 
@@ -107,12 +108,15 @@ POST /urls
 | ----- | -------- | ----- | -------------------------------------------- |
 | `url` | `string` | Ya    | URL website yang akan diindeks (format valid) |
 | `desiredInformation` | `string` | Tidak | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
+| `isChunked`          | `boolean`| Ya    | Apakah dokumen akan dipecah menjadi beberapa bagian. Format: boolean     |
 
 ### Contoh Request
 
 ```json
 {
-  "url": "https://example.com/article"
+  "url": "https://example.com/article",
+  "desiredInformation": "Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph",
+  "isChunked": true
 }
 ```
 

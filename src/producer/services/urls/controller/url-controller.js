@@ -5,7 +5,7 @@ import documentRepositories from '../../documents/repositories/document-reposito
 import userRepositories from '../../users/repositories/user-repositories.js';
 
 const addUrl = async (req, res) => {
-    const { url, desiredInformation } = req.body;
+    const { url, desiredInformation, isChunked } = req.body;
 
     const source = url;
     const type = 'url';
@@ -19,6 +19,7 @@ const addUrl = async (req, res) => {
         source,
         type,
         documentId: document.id,
+        isChunked,
     });
 
     return response(res, 201, null, document);

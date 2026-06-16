@@ -177,19 +177,21 @@ const extractDesiredInformation = traceable(
   }
 );
 
-const processIndexing = async ({ desiredInformation, source, type, documentId }) => {
+const processIndexing = async ({ desiredInformation, source, type, documentId, isChunked }) => {
   try {
     let docs = await loadDocument(source, type);
-    const cleanDocs = docsCleaning(docs);
 
     if (desiredInformation) {
-      docs = await extractDesiredInformation(cleanDocs, desiredInformation);
-      await vectorStore.addDocuments(docs);
-    } else {
-      const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 300, chunkOverlap: 60 });
-      docs = await splitter.splitDocuments(cleanDocs);
-      await vectorStore.addDocuments(docs);
+      docs = await extractDesiredInformation(docs, desiredInformation);
     }
+
+    if (isChunked) {
+      const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 500, chunkOverlap: 100 });
+      docs = await splitter.splitDocuments(docs);
+    }
+
+    docs = docsCleaning(docs);
+    await vectorStore.addDocuments(docs);
 
     const documents = docs.map(doc => doc.pageContent).join('\n\n');
     await updateDocumentStatus(documentId, 'completed', null, documents);
