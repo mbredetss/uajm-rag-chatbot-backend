@@ -13,8 +13,6 @@ const _runLLMChain = async (question, relevantDocs, historyChat) => {
         ([_doc, score]) => score <= THRESHOLD
     );
 
-    if (filteredDocsWithScore.length === 0) return "Maaf, saya tidak bisa menjawab pertanyaan ini.";
-
     const filteredDocs = filteredDocsWithScore.map(([doc, _score]) => doc);
 
     const sortedDocs = [...filteredDocs].sort((a, b) => {
@@ -62,7 +60,7 @@ const generateAnswer = async (req, res) => {
 
     const result = await runLLMChain(message, relevantDocs, historyChat);
 
-    await generateAnswerRepositories.addChatHistory(userId, rewrittenQuery.content, result);
+    await generateAnswerRepositories.addChatHistory(userId, message, result);
 
     return response(res, 200, null, {
         answer: result,
