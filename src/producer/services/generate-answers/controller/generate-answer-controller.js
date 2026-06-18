@@ -13,6 +13,8 @@ const _runLLMChain = async (question, relevantDocs, historyChat) => {
         ([_doc, score]) => score <= THRESHOLD
     );
 
+    if (filteredDocsWithScore.length === 0) return "Maaf, saya tidak bisa menjawab pertanyaan ini.";
+
     const filteredDocs = filteredDocsWithScore.map(([doc, _score]) => doc);
 
     const sortedDocs = [...filteredDocs].sort((a, b) => {
