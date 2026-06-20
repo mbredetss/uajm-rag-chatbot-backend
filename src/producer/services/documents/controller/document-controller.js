@@ -6,7 +6,7 @@ import documentRepositories from '../repositories/document-repositories.js';
 
 const addDocument = async (req, res) => {
   const file = req.file;
-  const { desiredInformation, isChunked } = req.body;
+  const isLongDocument = req.body.isLongDocument === 'true' || req.body.isLongDocument === true;
 
   if (!file) {
     throw new ValidationError('Dokumen harus dikirim');
@@ -20,11 +20,10 @@ const addDocument = async (req, res) => {
   const document = await documentRepositories.addDocuments(source, type, fullName);
 
   await publishToQueue('indexing_queue', {
-    desiredInformation,
+    isLongDocument,
     source,
     type,
     documentId: document.id,
-    isChunked,
   });
 
   return response(res, 201, null, document);

@@ -5,12 +5,13 @@ import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
 import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
 import { HumanMessage } from '@langchain/core/messages';
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
+import { ParentDocumentRetriever } from "@langchain/classic/retrievers/parent_document";
 import vectorStore from '../producer/utils/vectorStore.js';
 import { ChatGoogleGenerativeAI } from '@langchain/google-genai';
 import pool from '../producer/utils/database.js';
 import * as fs from "fs";
-import { z } from "zod";
 import { traceable } from "langsmith/traceable";
+import docStore from '../producer/services/generate-answers/doc-store/docStore.js'
 
 const model = new ChatGoogleGenerativeAI({
   apiKey: process.env.GOOGLE_API_KEY,
@@ -107,91 +108,55 @@ const updateDocumentStatus = async (documentId, status, errorMessage, content) =
   );
 };
 
-const docsCleaning = (docs) => {
-  return docs.map(doc => ({
-    ...doc,
-    pageContent: doc.pageContent.replace(/[\n\r\t]/g, ' '),
-    metadata: {
-      ...doc.metadata,
-      createdAt: new Date().toISOString(),
-    },
-  }));
-};
-
-const _extractDesiredInformation = async (docs, desiredInformation) => {
-  const prompt = `
-    You are an AI assistant that extracts information from documents.
-    You are tasked with extracting information from documents based on the desired information.
-    The results of your extraction will be entered into the knowledge base for my RAG chatbot. This is to ensure the knowledge base is of high quality (containing only the desired information).
-    Therefore, do not extract any information other than the desired information. Make in Indonesian.
-    Here is a list of abbreviations may will appear in the documents:
-    - UAJM -> Universitas Atma Jaya Makassar
-    - BAPSI -> Biro Administrasi Perencanaan dan Pengembangan Sistem Informasi
-    - BAUK -> Biro Administrasi Umum dan Keuangan
-    - BAA -> Biro Administrasi Akademik & Kemahasiswaan
-    - LPPM -> Lembaga Penelitian dan Pengabdian kepada Masyarakat
-    - BKAM -> Biro Administrasi Hubungan Masyarakat, Kemahasiswaan dan Alumni
-    - FTI -> Fakultas Teknologi Informasi
-    - TI -> Teknik Informatika
-    - FEB -> Fakultas Ekonomi dan Bisnis
-    - BKD -> Beban Kerja Dosen
-    - TA -> Tugas Akhir
-    If the documents has an abbreviation that is not mentioned in the list above, then try changing the abbreviation to its full form in the academic scope.
-    Here is the desired information: "${desiredInformation}"
-    Here is the document: "${docs[0].pageContent}"
-    `;
-
-  const modelWithStructure = model.withStructuredOutput(
-    z.object({
-      content: z.string().describe("The extracted information."),
-      isInformationAvailable: z.boolean().describe("Is the desired information present in the document? False if not, true if present"),
+const embeddingDocs = async (parentConfig, childConfig, docs) => {
+  const parentSplitter = parentConfig
+    ? new RecursiveCharacterTextSplitter({
+      chunkSize: parentConfig.chunkSize,
+      chunkOverlap: parentConfig.chunkOverlap,
     })
-  );
-
-  const message = new HumanMessage({
-    content: [
-      { type: "text", text: prompt },
-    ],
+    : undefined;
+  const childSplitter = new RecursiveCharacterTextSplitter({
+    chunkSize: childConfig.chunkSize,
+    chunkOverlap: childConfig.chunkOverlap,
+  });
+  const retriever = new ParentDocumentRetriever({
+    vectorstore: vectorStore,
+    docstore: docStore,
+    parentSplitter,
+    childSplitter,
   });
 
-  const response = await modelWithStructure.invoke([message]);
+  await retriever.addDocuments(docs);
+}
 
-  const { isInformationAvailable, content } = response;
-  if (!isInformationAvailable) throw new Error('Informasi yang diinginkan tidak ditemukan dalam dokumen.');
-
-  return [
-    {
-      ...docs[0],
-      pageContent: content,
-    }
-  ];
-};
-
-const extractDesiredInformation = traceable(
-  _extractDesiredInformation,
-  {
-    name: "extractDesiredInformation",
-    run_type: "llm",
-    tags: ["indexing", "information-extraction"],
-    metadata: { project: "uajm-rag-chatbot" },
-  }
-);
-
-const processIndexing = async ({ desiredInformation, source, type, documentId, isChunked }) => {
+const processIndexing = async ({ source, type, documentId, isLongDocument }) => {
   try {
     let docs = await loadDocument(source, type);
+    // inject createdAt Metadata
+    docs = docs.map(doc => ({
+      ...doc,
+      metadata: {
+        ...doc.metadata,
+        createdAt: new Date().toISOString(),
+      },
+    }));
 
-    if (desiredInformation) {
-      docs = await extractDesiredInformation(docs, desiredInformation);
+    const childSplitter = {
+      chunkSize: 300,
+      chunkOverlap: 60,
+    };
+
+    if (isLongDocument) {
+      // parent = dokumen utuh (tanpa splitting)
+      await embeddingDocs(null, childSplitter, docs);
+    } else {
+      const parentSplitter = {
+        chunkSize: 1100,
+        chunkOverlap: 220,
+      }
+
+      await embeddingDocs(parentSplitter, childSplitter, docs);
     }
-
-    if (isChunked) {
-      const splitter = new RecursiveCharacterTextSplitter({ chunkSize: 500, chunkOverlap: 100 });
-      docs = await splitter.splitDocuments(docs);
-    }
-
-    docs = docsCleaning(docs);
-    await vectorStore.addDocuments(docs);
 
     const documents = docs.map(doc => doc.pageContent).join('\n\n');
     await updateDocumentStatus(documentId, 'completed', null, documents);

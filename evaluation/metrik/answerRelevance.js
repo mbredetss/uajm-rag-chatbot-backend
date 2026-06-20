@@ -15,7 +15,8 @@ Explain your reasoning in a step-by-step manner to ensure your reasoning and con
 
 const llm = new ChatGroq({
     model: 'openai/gpt-oss-120b',
-    maxRetries: 15
+    maxRetries: 15, 
+    apiKey: process.env.GROQ_API_KEY_METRIK, 
 }).withStructuredOutput(
     z
         .object({

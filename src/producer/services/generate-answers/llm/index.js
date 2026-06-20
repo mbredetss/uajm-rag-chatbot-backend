@@ -2,8 +2,15 @@
 import 'dotenv/config';
 import { ChatGroq } from '@langchain/groq';
 
-const llm = new ChatGroq({
-  model: 'openai/gpt-oss-120b',
+const llmGenerateAnswer = new ChatGroq({
+  model: 'openai/gpt-oss-120b', 
+  apiKey: process.env.GROQ_API_KEY_GENERATE_ANSWER,
+  
 });
 
-export default llm;
+const llmQueryRewrite = new ChatGroq({
+  model: 'openai/gpt-oss-120b',
+  apiKey: process.env.GROQ_API_KEY_QUERY_REWRITING,
+});
+
+export { llmGenerateAnswer, llmQueryRewrite };

@@ -527,7 +527,7 @@ describe('HTTP Server', () => {
             expect(response.body).toHaveProperty('status', 'fail');
         });
 
-        it('should reponse 400 when isChunked payload is not provided', async () => {
+        it('should reponse 400 when isLongDocument payload is not provided', async () => {
             const response = await request(app)
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
@@ -537,21 +537,21 @@ describe('HTTP Server', () => {
             expect(response.headers['content-type']).toMatch(/application\/json/);
             expect(response.body).toBeTypeOf('object');
             expect(response.body).toHaveProperty('status', 'fail');
-            expect(response.body).toHaveProperty('message', '"isChunked" is required');
+            expect(response.body).toHaveProperty('message', '"isLongDocument" is required');
         });
 
-        it('should reponse 400 when isChunked payload is not boolean', async () => {
+        it('should reponse 400 when isLongDocument payload is not boolean', async () => {
             const response = await request(app)
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .field('isChunked', 'not a boolean')
+                .field('isLongDocument', 'not a boolean')
                 .attach('document', testFilePath);
 
             expect(response.status).toBe(400);
             expect(response.headers['content-type']).toMatch(/application\/json/);
             expect(response.body).toBeTypeOf('object');
             expect(response.body).toHaveProperty('status', 'fail');
-            expect(response.body).toHaveProperty('message', '"isChunked" must be a boolean');
+            expect(response.body).toHaveProperty('message', '"isLongDocument" must be a boolean');
         });
 
         it('should response 400 when no document file is attached', async () => {
@@ -559,7 +559,7 @@ describe('HTTP Server', () => {
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
                 .send({
-                    isChunked: false,
+                    isLongDocument: false,
                 });
 
             expect(response.status).toBe(400);
@@ -613,7 +613,7 @@ describe('HTTP Server', () => {
             const response = await request(app)
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .field('isChunked', false)
+                .field('isLongDocument', false)
                 .attach('document', testFilePath);
 
             expect(response.status).toBe(201);
@@ -633,7 +633,7 @@ describe('HTTP Server', () => {
                 .set('Authorization', `Bearer ${accessToken}`)
                 .field({
                     desiredInformation: 'Informasi tentang UAJM',
-                    isChunked: false
+                    isLongDocument: false
                 })
                 .attach('document', testFilePath);
 

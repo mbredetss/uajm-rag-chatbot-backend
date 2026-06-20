@@ -1,4 +1,4 @@
-import llm from "../llm/index.js";
+import { llmGenerateAnswer } from "../llm/index.js";
 import vectorStore from "../../../utils/vectorStore.js";
 import { HumanMessage, AIMessage, SystemMessage } from "@langchain/core/messages";
 import queryReWriting from "../query-rewrite/queryReWriting.js";
@@ -6,16 +6,12 @@ import { response } from "../../../utils/index.js";
 import { traceable } from "langsmith/traceable";
 import generateAnswerRepositories from "../repositories/generate-answer-repositories.js";
 import { generateAnswerPrompt } from "../llm/prompt.js";
+import PostgresDocstore from "../doc-store/PostgresDocStore.js";
+import pool from "../../../utils/database.js";
 
 const _runLLMChain = async (question, relevantDocs, historyChat) => {
-    const THRESHOLD = 0.6;
-    const filteredDocsWithScore = relevantDocs.filter(
-        ([_doc, score]) => score <= THRESHOLD
-    );
 
-    const filteredDocs = filteredDocsWithScore.map(([doc, _score]) => doc);
-
-    const sortedDocs = [...filteredDocs].sort((a, b) => {
+    const sortedDocs = [...relevantDocs].sort((a, b) => {
         const dateA = new Date(a.metadata.createdAt);
         const dateB = new Date(b.metadata.createdAt);
         return dateB - dateA;
@@ -26,7 +22,7 @@ const _runLLMChain = async (question, relevantDocs, historyChat) => {
     CreatedAt: ${doc.metadata.createdAt}.
   `).join('\n\n');
 
-    const llmAnswer = await llm.invoke([
+    const llmAnswer = await llmGenerateAnswer.invoke([
         new SystemMessage(generateAnswerPrompt),
         ...(historyChat ?? []),
         new HumanMessage(`question: ${question}, documents: ${context}`),
@@ -56,9 +52,12 @@ const generateAnswer = async (req, res) => {
     ]);
 
     const rewrittenQuery = await queryReWriting(message, historyChat);
-    const relevantDocs = await vectorStore.similaritySearchWithScore(rewrittenQuery.content, 5);
+    const childDocs = await vectorStore.similaritySearch(rewrittenQuery.content, 5);
+    const postgresDocStore = new PostgresDocstore(pool);
+    const relevantDocs = await postgresDocStore.mget(childDocs.map(doc => doc.metadata.doc_id));
+    const parentDocs = [...new Set(relevantDocs)];
 
-    const result = await runLLMChain(message, relevantDocs, historyChat);
+    const result = await runLLMChain(message, parentDocs, historyChat);
 
     await generateAnswerRepositories.addChatHistory(userId, message, result);
 
