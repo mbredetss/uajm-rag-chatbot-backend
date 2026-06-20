@@ -2,7 +2,6 @@ import path from 'path';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { TextLoader } from '@langchain/classic/document_loaders/fs/text';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
-import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
 import { HumanMessage } from '@langchain/core/messages';
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { ParentDocumentRetriever } from "@langchain/classic/retrievers/parent_document";
@@ -18,14 +17,7 @@ const model = new ChatGoogleGenerativeAI({
   model: 'gemini-3-flash-preview',
 });
 
-const _loadDocument = async (source, type) => {
-  if (type === 'url') {
-    const loader = new CheerioWebBaseLoader(source, {
-      selector: 'p, ol, h1, h2, h3, h4, h5, h6',
-    });
-    return await loader.load();
-  }
-
+const _loadDocument = async (source) => {
   const ext = path.extname(source).toLowerCase();
 
   if (ext === '.pdf') {
@@ -129,9 +121,9 @@ const embeddingDocs = async (parentConfig, childConfig, docs) => {
   await retriever.addDocuments(docs);
 }
 
-const processIndexing = async ({ source, type, documentId, isLongDocument }) => {
+const processIndexing = async ({ source, documentId, isLongDocument }) => {
   try {
-    let docs = await loadDocument(source, type);
+    let docs = await loadDocument(source);
     // inject createdAt Metadata
     docs = docs.map(doc => ({
       ...doc,
@@ -147,7 +139,6 @@ const processIndexing = async ({ source, type, documentId, isLongDocument }) => 
     };
 
     if (isLongDocument) {
-      // parent = dokumen utuh (tanpa splitting)
       await embeddingDocs(null, childSplitter, docs);
     } else {
       const parentSplitter = {

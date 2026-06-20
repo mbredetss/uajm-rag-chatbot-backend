@@ -14,7 +14,7 @@ vi.mock('../../utils/rabbitmq.js', () => ({
 }));
 
 vi.mock('../../services/generate-answers/llm/index.js', () => ({
-    default: {
+    llmGenerateAnswer: {
         invoke: vi.fn().mockResolvedValue({
             content: 'Ini adalah jawaban mock dari LLM',
         }),
@@ -23,14 +23,11 @@ vi.mock('../../services/generate-answers/llm/index.js', () => ({
 
 vi.mock('../../utils/vectorStore.js', () => ({
     default: {
-        similaritySearchWithScore: vi.fn().mockResolvedValue([
-            [
-                {
-                    pageContent: 'Konten dokumen mock',
-                    metadata: { createdAt: '2024-01-01' },
-                },
-                0.3,
-            ],
+        similaritySearch: vi.fn().mockResolvedValue([
+            {
+                pageContent: 'Konten dokumen mock',
+                metadata: { createdAt: '2024-01-01', doc_id: 'doc-123' },
+            },
         ]),
     },
 }));
@@ -41,6 +38,20 @@ vi.mock('../../services/generate-answers/query-rewrite/queryReWriting.js', () =>
     }),
 }));
 
+vi.mock('../../services/generate-answers/doc-store/PostgresDocStore.js', () => {
+    return {
+        default: class MockPostgresDocstore {
+            async mget() {
+                return [
+                    {
+                        pageContent: 'Konten parent dokumen mock',
+                        metadata: { createdAt: '2024-01-01' },
+                    },
+                ];
+            }
+        },
+    };
+});
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -646,138 +657,15 @@ describe('HTTP Server', () => {
         });
     });
 
-    describe('when POST /urls', () => {
-        let accessToken = null;
-
-        beforeAll(async () => {
-            const loginRes = await request(app)
-                .post('/authentications')
-                .send({
-                    username: process.env.USERNAME_SUPER_ADMIN,
-                    password: process.env.PASSWORD_SUPER_ADMIN,
-                });
-            accessToken = loginRes.body.data?.accessToken;
-        });
-
-        afterAll(async () => {
-            await DocumentsTableTestHelper.cleanTable();
-            await AuthenticationsTableTestHelper.cleanTable();
-        });
-
-        it('should response 401 when no token is provided', async () => {
-            const response = await request(app)
-                .post('/urls')
-                .send({ url: 'https://example.com' });
-
-            expect(response.status).toBe(401);
-            expect(response.headers['content-type']).toMatch(/application\/json/);
-            expect(response.body).toBeTypeOf('object');
-            expect(response.body).toHaveProperty('status', 'fail');
-        });
-
-        it('should reponse 400 when isChunked payload is not provided', async () => {
-            const response = await request(app)
-                .post('/urls')
-                .set('Authorization', `Bearer ${accessToken}`)
-                .send({ url: 'https://example.com' });
-
-            expect(response.status).toBe(400);
-            expect(response.headers['content-type']).toMatch(/application\/json/);
-            expect(response.body).toBeTypeOf('object');
-            expect(response.body).toHaveProperty('status', 'fail');
-            expect(response.body).toHaveProperty('message', '"isChunked" is required');
-        });
-
-        it('should reponse 400 when isChunked payload is not boolean', async () => {
-            const response = await request(app)
-                .post('/urls')
-                .set('Authorization', `Bearer ${accessToken}`)
-                .send({
-                    isChunked: 'not a boolean',
-                    url: 'https://example.com'
-                });
-
-            expect(response.status).toBe(400);
-            expect(response.headers['content-type']).toMatch(/application\/json/);
-            expect(response.body).toBeTypeOf('object');
-            expect(response.body).toHaveProperty('status', 'fail');
-            expect(response.body).toHaveProperty('message', '"isChunked" must be a boolean');
-        });
-
-        it('should response 400 when url is not provided', async () => {
-            const response = await request(app)
-                .post('/urls')
-                .set('Authorization', `Bearer ${accessToken}`)
-                .send({});
-
-            expect(response.status).toBe(400);
-            expect(response.headers['content-type']).toMatch(/application\/json/);
-            expect(response.body).toBeTypeOf('object');
-            expect(response.body).toHaveProperty('status', 'fail');
-            expect(response.body).toHaveProperty('message', '"isChunked" is required');
-        });
-
-        it('should response 400 when url format is invalid', async () => {
-            const response = await request(app)
-                .post('/urls')
-                .set('Authorization', `Bearer ${accessToken}`)
-                .send({
-                    isChunked: false,
-                    url: 'bukan-url-valid'
-                });
-
-            expect(response.status).toBe(400);
-            expect(response.headers['content-type']).toMatch(/application\/json/);
-            expect(response.body).toBeTypeOf('object');
-            expect(response.body).toHaveProperty('status', 'fail');
-            expect(response.body).toHaveProperty('message');
-            expect(response.body.message).toMatch('\"url\" must be a valid uri');
-        });
-
-        it('should response 201 when url is valid', async () => {
-            const response = await request(app)
-                .post('/urls')
-                .set('Authorization', `Bearer ${accessToken}`)
-                .send({
-                    isChunked: false,
-                    url: 'https://example.com'
-                });
-
-            expect(response.status).toBe(201);
-            expect(response.headers['content-type']).toMatch(/application\/json/);
-            expect(response.body).toBeTypeOf('object');
-            expect(response.body).toHaveProperty('status', 'success');
-            expect(response.body).toHaveProperty('data');
-            expect(response.body.data).toHaveProperty('id');
-            expect(response.body.data).toHaveProperty('source', 'https://example.com');
-            expect(response.body.data).toHaveProperty('type', 'url');
-            expect(response.body.data).toHaveProperty('status', 'in progress');
-        });
-
-        it('should response 201 when url is sent with desiredInformation', async () => {
-            const response = await request(app)
-                .post('/urls')
-                .set('Authorization', `Bearer ${accessToken}`)
-                .send({
-                    url: 'https://uajm.ac.id',
-                    desiredInformation: 'Informasi tentang kampus UAJM', 
-                    isChunked: false,
-                });
-
-            expect(response.status).toBe(201);
-            expect(response.headers['content-type']).toMatch(/application\/json/);
-            expect(response.body).toBeTypeOf('object');
-            expect(response.body).toHaveProperty('status', 'success');
-            expect(response.body).toHaveProperty('data');
-            expect(response.body.data).toHaveProperty('source', 'https://uajm.ac.id');
-            expect(response.body.data).toHaveProperty('type', 'url');
-        });
-    });
-
     describe('when GET /documents', () => {
         let accessToken = null;
+        const testFilePath = path.join(__dirname, 'test-document.pdf');
 
         beforeAll(async () => {
+            if (!fs.existsSync(uploadDir)) {
+                fs.mkdirSync(uploadDir, { recursive: true });
+            }
+
             const loginRes = await request(app)
                 .post('/authentications')
                 .send({
@@ -788,6 +676,8 @@ describe('HTTP Server', () => {
         });
 
         afterAll(async () => {
+            fs.rmSync(testFilePath, { force: true });
+            fs.rmSync(uploadDir, { force: true, recursive: true });
             await DocumentsTableTestHelper.cleanTable();
             await AuthenticationsTableTestHelper.cleanTable();
         });
@@ -804,13 +694,16 @@ describe('HTTP Server', () => {
 
         it('should response 200 and return array of documents', async () => {
             // Tambahkan document terlebih dahulu via POST /urls
+            fs.writeFileSync(testFilePath, 'dummy text content for testing');
+
             await request(app)
-                .post('/urls')
+                .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .send({
-                    url: 'https://test-get-docs.com',
-                    isChunked: false,
-                });
+                .field({
+                    desiredInformation: 'Informasi tentang UAJM',
+                    isLongDocument: false
+                })
+                .attach('document', testFilePath);
 
             const response = await request(app)
                 .get('/documents')

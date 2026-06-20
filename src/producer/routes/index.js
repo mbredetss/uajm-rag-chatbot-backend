@@ -14,7 +14,6 @@ const router = Router();
 
 router.use('/', webhooksRouter);
 router.use('/documents', authenticateToken, documents);
-router.use('/urls', authenticateToken, urls);
 router.use('/authentications', authentications);
 router.use('/users', authenticateToken, verifySuperAdmin, users);
 router.use('/generate-answers', verifySecretCode, generateAnswers);
