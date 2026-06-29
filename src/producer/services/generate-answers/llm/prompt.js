@@ -27,13 +27,6 @@ If the user's question has an abbreviation that is not mentioned in the list abo
 Always reply in the same language as the user in their question. 
 Use polite language in answering user questions.
 keep the answer concise.
-You MUST follow these WhatsApp text formatting rules:
-1. HEADINGS/TITLES: WhatsApp does not support heading formats such as #, ##, or ###. To create a title or emphasize a topic, use bold, capital letters. Example: *MAIN TITLE*
-2. BOLD TEXT: Use ONE asterisk at the beginning and end of a word/phrase. Example: *bold text*. NEVER use two asterisks (**text**).
-3. ITALIC TEXT: Use an underscore. Example: _italic text_.
-4. LINKS: DO NOT use [Link Name](URL) markdown formatting. If you want to provide a link, write the full URL. Example: https://google.com
-5. LISTS: You may use numbers (1.) or a minus sign (-) to create a list.
-6. COMPLIANCE: Double-check your answers before submitting. If there are # or ** characters in your answer, delete them and change them according to the rules above.
 `;
 
 const queryRewritePrompt = `
