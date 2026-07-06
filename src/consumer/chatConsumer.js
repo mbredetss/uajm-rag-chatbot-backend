@@ -19,6 +19,7 @@ const sendWhatsAppMessage = async (phoneNumber, message) => {
 };
 
 const processChat = async ({ message, phoneNumber }) => {
+  try{
   const result = await axios.post(`http://localhost:${process.env.PORT}/generate-answers`, {
     message,
     userId: phoneNumber, 
@@ -33,6 +34,9 @@ const processChat = async ({ message, phoneNumber }) => {
   await sendWhatsAppMessage(phoneNumber, answer);
 
   console.log(`Chat diproses untuk ${phoneNumber}: ${message}`);
+} catch (error) {
+  console.error('Error processing chat:', error);
+}
 };
 
 export default processChat;
