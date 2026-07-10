@@ -2,6 +2,7 @@ import path from 'path';
 import { PDFLoader } from '@langchain/community/document_loaders/fs/pdf';
 import { TextLoader } from '@langchain/classic/document_loaders/fs/text';
 import { DocxLoader } from '@langchain/community/document_loaders/fs/docx';
+import { CheerioWebBaseLoader } from '@langchain/community/document_loaders/web/cheerio';
 import { HumanMessage } from '@langchain/core/messages';
 import { RecursiveCharacterTextSplitter } from "@langchain/textsplitters";
 import { ParentDocumentRetriever } from "@langchain/classic/retrievers/parent_document";
