@@ -3,7 +3,8 @@
 exports.up = (pgm) => {
   pgm.createTable('documents', {
     id: 'id',
-    source: { type: 'varchar(500)', notNull: true },
+    source: { type: 'varchar(500)', notNull: true }, 
+    type: { type: 'varchar(10)', notNull: true }, 
     status: { type: 'varchar(20)', notNull: true, default: 'in progress' },
     content: {
       type: 'text'

@@ -17,7 +17,14 @@ const model = new ChatGoogleGenerativeAI({
   model: 'gemini-3-flash-preview',
 });
 
-const _loadDocument = async (source) => {
+const _loadDocument = async (source, type) => {
+  if (type === 'url') {
+    const loader = new CheerioWebBaseLoader(source, {
+      selector: 'p, ol, h1, h2, h3, h4, h5, h6',
+    });
+    return await loader.load();
+  }
+
   const ext = path.extname(source).toLowerCase();
 
   if (ext === '.pdf') {
@@ -121,9 +128,9 @@ const embeddingDocs = async (parentConfig, childConfig, docs) => {
   await retriever.addDocuments(docs);
 }
 
-const processIndexing = async ({ source, documentId, isLongDocument }) => {
+const processIndexing = async ({ source, type, documentId, isLongDocument }) => {
   try {
-    let docs = await loadDocument(source);
+    let docs = await loadDocument(source, type);
     // inject createdAt Metadata
     docs = docs.map(doc => ({
       ...doc,

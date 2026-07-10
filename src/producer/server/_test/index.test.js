@@ -637,23 +637,117 @@ describe('HTTP Server', () => {
             expect(response.body.data).toHaveProperty('type', 'docs');
             expect(response.body.data).toHaveProperty('status', 'in progress');
         });
+    });
 
-        it('should response 201 when document is uploaded with desiredInformation', async () => {
+
+    describe('when POST /urls', () => {
+        let accessToken = null;
+
+        beforeAll(async () => {
+            const loginRes = await request(app)
+                .post('/authentications')
+                .send({
+                    username: process.env.USERNAME_SUPER_ADMIN,
+                    password: process.env.PASSWORD_SUPER_ADMIN,
+                });
+            accessToken = loginRes.body.data?.accessToken;
+        });
+
+        afterAll(async () => {
+            await DocumentsTableTestHelper.cleanTable();
+            await AuthenticationsTableTestHelper.cleanTable();
+        });
+
+        it('should response 401 when no token is provided', async () => {
+            const response = await request(app)
+                .post('/urls')
+                .send({ url: 'https://example.com' });
+
+            expect(response.status).toBe(401);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+        });
+
+        it('should reponse 400 when isLongDocument payload is not provided', async () => {
             const response = await request(app)
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
-                .field({
-                    desiredInformation: 'Informasi tentang UAJM',
-                    isLongDocument: false
-                })
-                .attach('document', testFilePath);
+                .send({
+                    url: 'https://example.com'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', '"isLongDocument" is required');
+        });
+
+        it('should reponse 400 when isLongDocument payload is not boolean', async () => {
+            const response = await request(app)
+                .post('/urls')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .send({
+                    isLongDocument: 'not a boolean',
+                    url: 'https://example.com'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', '"isLongDocument" must be a boolean');
+        });
+
+        it('should response 400 when url is not provided', async () => {
+            const response = await request(app)
+                .post('/urls')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .send({});
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message', '"isLongDocument" is required');
+        });
+
+        it('should response 400 when url format is invalid', async () => {
+            const response = await request(app)
+                .post('/urls')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .send({
+                    isLongDocument: false,
+                    url: 'bukan-url-valid'
+                });
+
+            expect(response.status).toBe(400);
+            expect(response.headers['content-type']).toMatch(/application\/json/);
+            expect(response.body).toBeTypeOf('object');
+            expect(response.body).toHaveProperty('status', 'fail');
+            expect(response.body).toHaveProperty('message');
+            expect(response.body.message).toMatch('\"url\" must be a valid uri');
+        });
+
+        it('should response 201 when url is valid', async () => {
+            const response = await request(app)
+                .post('/urls')
+                .set('Authorization', `Bearer ${accessToken}`)
+                .send({
+                    isLongDocument: false,
+                    url: 'https://example.com'
+                });
 
             expect(response.status).toBe(201);
             expect(response.headers['content-type']).toMatch(/application\/json/);
             expect(response.body).toBeTypeOf('object');
             expect(response.body).toHaveProperty('status', 'success');
             expect(response.body).toHaveProperty('data');
-            expect(response.body.data).toHaveProperty('type', 'docs');
+            expect(response.body.data).toHaveProperty('id');
+            expect(response.body.data).toHaveProperty('source', 'https://example.com');
+            expect(response.body.data).toHaveProperty('type', 'url');
+            expect(response.body.data).toHaveProperty('status', 'in progress');
         });
     });
 
@@ -700,7 +794,6 @@ describe('HTTP Server', () => {
                 .post('/documents')
                 .set('Authorization', `Bearer ${accessToken}`)
                 .field({
-                    desiredInformation: 'Informasi tentang UAJM',
                     isLongDocument: false
                 })
                 .attach('document', testFilePath);

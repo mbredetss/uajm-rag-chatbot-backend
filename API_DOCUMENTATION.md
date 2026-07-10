@@ -107,8 +107,7 @@ POST /urls
 | Field | Tipe     | Wajib | Keterangan                                   |
 | ----- | -------- | ----- | -------------------------------------------- |
 | `url` | `string` | Ya    | URL website yang akan diindeks (format valid) |
-| `desiredInformation` | `string` | Tidak | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
-| `isChunked`          | `boolean`| Ya    | Apakah dokumen akan dipecah menjadi beberapa bagian. Format: boolean     |
+| `isLongDocument` | `boolean` | Ya | Informasi yang diinginkan untuk diekstrak dari dokumen. Format: paragraph |
 
 ### Contoh Request
 
