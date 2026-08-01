@@ -57,7 +57,7 @@ const generateAnswer = async (req, res) => {
     const relevantDocs = await postgresDocStore.mget(childDocs.map(doc => doc.metadata.doc_id));
     const parentDocs = [...new Set(relevantDocs)];
 
-    const result = await runLLMChain(message, parentDocs, historyChat);
+    const result = await runLLMChain(rewrittenQuery.content, parentDocs, historyChat);
 
     await generateAnswerRepositories.addChatHistory(userId, message, result);
 
